@@ -1,5 +1,4 @@
 use base64::{engine::general_purpose, Engine as _};
-use std::env;
 use std::fs;
 use tauri::AppHandle;
 
@@ -42,14 +41,9 @@ pub fn save_face_image(app: AppHandle, image_data: String) -> Result<String, Str
     // Run cropper
     let detect_model = app_config.methods.face.detection.model;
 
-    // Resolve the helper from installed, AppImage, development, then PATH locations.
-    let appimage_helper = env::var_os("APPDIR")
-        .map(std::path::PathBuf::from)
-        .map(|path| path.join("usr/bin/biopass-helper"));
+    // Resolve the helper from installed, development, then PATH locations.
     let helper_bin = if std::path::Path::new("/usr/local/bin/biopass-helper").exists() {
         "/usr/local/bin/biopass-helper".to_string()
-    } else if appimage_helper.as_ref().is_some_and(|path| path.exists()) {
-        appimage_helper.unwrap().to_string_lossy().to_string()
     } else if std::path::Path::new("../../auth/build/pam/biopass-helper").exists() {
         "../../auth/build/pam/biopass-helper".to_string()
     } else {

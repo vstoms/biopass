@@ -44,7 +44,7 @@ To build both the C++ backend and the Tauri frontend:
 make build
 ```
 
-To package the application into Linux release artifacts (`.deb`, `.rpm`, and `.AppImage`):
+To package the application into Linux release artifacts (`.deb` and `.rpm`)
 ```bash
 make package
 ```

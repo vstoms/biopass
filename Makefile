@@ -55,7 +55,6 @@ build-app: build-auth
 package-app: build-app
 	@echo "==> [app] Tauri packages are in app/src-tauri/target/release/bundle/"
 	@ls app/src-tauri/target/release/bundle/deb/*.deb \
-	     app/src-tauri/target/release/bundle/appimage/*.AppImage \
 	     app/src-tauri/target/release/bundle/rpm/*.rpm 2>/dev/null || true
 
 clean-app:
