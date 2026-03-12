@@ -2,8 +2,15 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::AppHandle;
 
-const PAM_CONFIG_PATH: &str = "/etc/pam.d/common-auth";
+const PAM_CONFIG_PATHS: &[&str] = &["/etc/pam.d/common-auth", "/etc/pam.d/system-auth"];
 const PAM_MODULE_ENTRY: &str = "auth\t[success=2 default=ignore]\tlibbiopass_pam.so";
+
+pub fn find_existing_pam_config_path(candidates: &[&str]) -> Option<PathBuf> {
+    candidates
+        .iter()
+        .map(PathBuf::from)
+        .find(|path| path.exists())
+}
 
 pub fn modify_pam_lines(lines: &mut Vec<String>, pam_enabled: bool) -> bool {
     let mut changed = false;
@@ -99,14 +106,12 @@ pub fn save_pam_config_with_backup(path: &PathBuf, content: &str) -> Result<(), 
 pub async fn apply_pam_config(app: AppHandle) -> Result<(), String> {
     let config =
         crate::config::load_config(app).map_err(|e| format!("Failed to load config: {}", e))?;
-    let path = PathBuf::from(PAM_CONFIG_PATH);
-
-    if !path.exists() {
-        return Err(format!(
-            "PAM configuration file not found: {}",
-            PAM_CONFIG_PATH
-        ));
-    }
+    let path = find_existing_pam_config_path(PAM_CONFIG_PATHS).ok_or_else(|| {
+        format!(
+            "PAM configuration file not found. Checked: {}",
+            PAM_CONFIG_PATHS.join(", ")
+        )
+    })?;
 
     let content =
         fs::read_to_string(&path).map_err(|e| format!("Failed to read PAM config: {}", e))?;
@@ -124,6 +129,29 @@ pub async fn apply_pam_config(app: AppHandle) -> Result<(), String> {
 mod tests {
     use super::*;
     use tempfile::tempdir;
+
+    #[test]
+    fn test_find_existing_pam_config_path_returns_first_match() {
+        let dir = tempdir().unwrap();
+        let first = dir.path().join("common-auth");
+        let second = dir.path().join("system-auth");
+
+        fs::write(&second, "system").unwrap();
+        fs::write(&first, "common").unwrap();
+
+        let candidates = [
+            first.to_str().unwrap(),
+            second.to_str().unwrap(),
+            "/tmp/does-not-exist",
+        ];
+
+        assert_eq!(find_existing_pam_config_path(&candidates).unwrap(), first);
+    }
+
+    #[test]
+    fn test_find_existing_pam_config_path_returns_none() {
+        assert!(find_existing_pam_config_path(&["/tmp/does-not-exist"]).is_none());
+    }
 
     #[test]
     fn test_modify_pam_lines_enable() {

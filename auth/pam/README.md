@@ -15,7 +15,7 @@ sudo mkdir -p /lib/security
 sudo cp ./build/auth/libbiopass_pam.so /lib/security/
 ```
 
-Add the following line on the top of file `/etc/pam.d/common-auth`:
+Add the following line on the top of your distro PAM include file (`/etc/pam.d/common-auth` on Debian/Ubuntu or `/etc/pam.d/system-auth` on Fedora):
 
 ```bash
 auth    required libbiopass_pam.so

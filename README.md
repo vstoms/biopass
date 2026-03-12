@@ -39,7 +39,7 @@ Biopass was developed by [@phucvinh57](https://github.com/phucvinh57) and [@thai
 
 ## Installation
 
-Please visit the [release page](https://github.com/TickLabVN/biopass/releases) to download newest version.
+Please visit the [release page](https://github.com/TickLabVN/biopass/releases) to download the newest `.deb`, `.rpm`, or `.AppImage` package.
 
 ## Features
 
@@ -58,5 +58,3 @@ Feel free to request new features or report bugs by opening an issue. For contri
   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/image?repos=TickLabVN/biopass&type=Date" />
   <img alt="Star History Chart" src="https://api.star-history.com/image?repos=TickLabVN/biopass&type=Date" />
 </picture>
-
-

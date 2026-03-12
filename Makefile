@@ -44,14 +44,14 @@ clean-auth:
 
 # ── app (Tauri / Bun / Rust) ──────────────────────────────────────────────
 # build-app depends on build-auth so the auth .so files exist before
-# Tauri packages them into the single combined .deb.
+# Tauri packages them into the combined Linux bundles.
 build-app: build-auth
 	@echo "==> [app] Installing JS dependencies…"
 	cd $(APP_DIR) && bun install --frozen-lockfile
 	@echo "==> [app] Building Tauri application…"
 	cd $(APP_DIR) && bun run tauri build
 
-# package-app produces the single combined .deb (Tauri app + auth libs bundled inside)
+# package-app produces the combined Linux bundles (Tauri app + auth libs bundled inside)
 package-app: build-app
 	@echo "==> [app] Tauri packages are in app/src-tauri/target/release/bundle/"
 	@ls app/src-tauri/target/release/bundle/deb/*.deb \
@@ -75,7 +75,7 @@ help:
 	@echo "    build          Build both auth and app (default)"
 	@echo "    build-auth     Configure + build the C++ PAM module only"
 	@echo "    build-app      Install JS deps + build the Tauri app only"
-	@echo "    package        Build + package everything into one combined .deb"
+	@echo "    package        Build + package everything into combined Linux bundles"
 	@echo "    package-app    Show Tauri combined bundle output paths"
 	@echo "    clean          Remove all build output"
 	@echo "    clean-auth     Remove auth/build/"

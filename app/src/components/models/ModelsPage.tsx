@@ -114,9 +114,9 @@ export function ModelsPage() {
             <h3 className="font-semibold text-lg">No models registered</h3>
           </div>
         ) : (
-          models.map((model, index) => (
+          models.map((model) => (
             <ModelCard
-              key={`${model.path}-${index}`}
+              key={model.path}
               model={model}
               status={statusMap[model.path]}
             />
