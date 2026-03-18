@@ -4,11 +4,8 @@
 #include <string>
 #include <vector>
 
-// OpenCV
-#include <opencv2/core.hpp>
-#include <opencv2/imgcodecs.hpp>
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
+// Image utilities (replaces OpenCV)
+#include "image_utils.h"
 
 // ONNX Runtime
 #include <onnxruntime_cxx_api.h>
@@ -26,21 +23,21 @@ struct MatchResult {
 
 class FaceRecognition {
  public:
-  FaceRecognition(const std::string& ckpt, const cv::Size& imgsz = {112, 112},
-                  const bool& cuda = false, const float threshold = 0.50);
+  FaceRecognition(const std::string& ckpt, int imgsz = 112, const bool& cuda = false,
+                  const float threshold = 0.50);
 
   void load_model(const std::string& ckpt);
-  std::vector<float> inference(cv::Mat& image);
-  std::vector<float> preprocess(cv::Mat& image);
+  std::vector<float> inference(const ImageRGB& image);
+  std::vector<float> preprocess(const ImageRGB& image);
 
   float cosine(const std::vector<float>& feat1, const std::vector<float>& feat2);
-  MatchResult match(cv::Mat& image1, cv::Mat& image2);
+  MatchResult match(const ImageRGB& image1, const ImageRGB& image2);
 
  private:
   std::string ckpt;
   bool cuda;
   float threshold;
-  cv::Size imgsz;
+  int imgsz;
 
   Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "FaceRecognition"};
   std::unique_ptr<Ort::Session> session;

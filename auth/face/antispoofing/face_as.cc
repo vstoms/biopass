@@ -12,8 +12,8 @@ int argmax(const float* data, int size) {
   return max_index;
 }
 
-FaceAntiSpoofing::FaceAntiSpoofing(const std::string& ckpt, const cv::Size& imgsz,
-                                   const bool& cuda, const float threshold) {
+FaceAntiSpoofing::FaceAntiSpoofing(const std::string& ckpt, int imgsz, const bool& cuda,
+                                   const float threshold) {
   this->ckpt = ckpt;
   this->imgsz = imgsz;
   this->cuda = cuda;
@@ -49,30 +49,18 @@ void FaceAntiSpoofing::load_model(const std::string& ckpt) {
     this->output_names_cstr.push_back(s.c_str());
 }
 
-std::vector<float> FaceAntiSpoofing::preprocess(cv::Mat& input_image) {
-  std::vector<float> mean = {0.5931, 0.4690, 0.4229};
-  std::vector<float> std = {0.2471, 0.2214, 0.2157};
-  int height = 128, width = 128;
-  cv::Mat resize_img, rgb_img;
-  cv::resize(input_image, resize_img, cv::Size(width, height));
-  cv::cvtColor(resize_img, rgb_img, cv::COLOR_BGR2RGB);
+std::vector<float> FaceAntiSpoofing::preprocess(const ImageRGB& input_image) {
+  const float mean[3] = {0.5931f, 0.4690f, 0.4229f};
+  const float std[3] = {0.2471f, 0.2214f, 0.2157f};
+  ImageRGB resize_img = image_resize(input_image, this->imgsz, this->imgsz);
 
-  std::vector<float> data(3 * height * width);
-  for (int c = 0; c < 3; c++) {
-    for (int y = 0; y < height; y++) {
-      for (int x = 0; x < width; x++) {
-        float val = rgb_img.at<cv::Vec3b>(y, x)[c] / 255.0f;
-        data[c * height * width + y * width + x] = (val - mean[c]) / std[c];
-      }
-    }
-  }
-  return data;
+  return image_to_chw_normalized(resize_img, mean, std);
 }
 
-SpoofResult FaceAntiSpoofing::inference(cv::Mat& image) {
+SpoofResult FaceAntiSpoofing::inference(const ImageRGB& image) {
   std::vector<float> input_data = this->preprocess(image);
 
-  std::vector<int64_t> input_shape = {1, 3, this->imgsz.height, this->imgsz.width};
+  std::vector<int64_t> input_shape = {1, 3, (int64_t)this->imgsz, (int64_t)this->imgsz};
   auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
   Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
       memory_info, input_data.data(), input_data.size(), input_shape.data(), input_shape.size());

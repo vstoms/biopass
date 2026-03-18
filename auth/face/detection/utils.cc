@@ -4,47 +4,6 @@
 #include <cmath>
 #include <numeric>
 
-float generate_scale(cv::Mat& image, const std::vector<int>& target_size) {
-  int origin_w = image.cols;
-  int origin_h = image.rows;
-
-  int target_h = target_size[0];
-  int target_w = target_size[1];
-
-  float ratio_h = static_cast<float>(target_h) / static_cast<float>(origin_h);
-  float ratio_w = static_cast<float>(target_w) / static_cast<float>(origin_w);
-  float resize_scale = std::min(ratio_h, ratio_w);
-  return resize_scale;
-}
-
-float letterbox(cv::Mat& input_image, cv::Mat& output_image, const std::vector<int>& target_size) {
-  if (input_image.cols == target_size[1] && input_image.rows == target_size[0]) {
-    if (input_image.data == output_image.data) {
-      return 1.;
-    } else {
-      output_image = input_image.clone();
-      return 1.;
-    }
-  }
-
-  float resize_scale = generate_scale(input_image, target_size);
-  int new_shape_w = std::round(input_image.cols * resize_scale);
-  int new_shape_h = std::round(input_image.rows * resize_scale);
-  float padw = (target_size[1] - new_shape_w) / 2.;
-  float padh = (target_size[0] - new_shape_h) / 2.;
-
-  int top = std::round(padh - 0.1);
-  int bottom = std::round(padh + 0.1);
-  int left = std::round(padw - 0.1);
-  int right = std::round(padw + 0.1);
-
-  cv::resize(input_image, output_image, cv::Size(new_shape_w, new_shape_h), 0, 0, cv::INTER_AREA);
-
-  cv::copyMakeBorder(output_image, output_image, top, bottom, left, right, cv::BORDER_CONSTANT,
-                     cv::Scalar(114.));
-  return resize_scale;
-}
-
 static std::vector<int> nms(const std::vector<RawDet>& dets, float iou_threshold) {
   if (dets.empty())
     return {};

@@ -37,9 +37,6 @@ if(BUILD_TESTS)
     add_subdirectory(test/face_engine)
 endif()
 
-# CXX Flags Configuration
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenCV_CFLAGS_OTHER}")
-
 install(
     TARGETS biopass_det biopass_reg biopass_as
     COMPONENT applications

@@ -4,15 +4,18 @@
 #include <memory>
 #include <vector>
 
-#include <opencv2/opencv.hpp>
-
 #include "face_detection.h"
 #include "face_recognition.h"
+#include "image_utils.h"
 
 using namespace std;
-using namespace cv;
 
 int main(int argc, char **argv) {
+  if (argc < 3) {
+    cerr << "Usage: " << argv[0] << " <image1.bmp> <image2.bmp>" << endl;
+    return 1;
+  }
+
   // Face det model
   FaceDetection model_face_det("./weights/yolov8n-face.onnx");
 
@@ -21,33 +24,49 @@ int main(int argc, char **argv) {
 
   // Face1 Inference
   std::vector<Detection> det_images;
-  cv::Mat image = cv::imread(argv[1]);
+  ImageRGB image = image_load_bmp(argv[1]);
+  if (image.empty()) {
+    cerr << "Failed to load image: " << argv[1] << endl;
+    return 1;
+  }
   det_images = model_face_det.inference(image);
 
-  cv::Mat face1 = det_images[0].image;
-  std::string file_name = std::string("result1.jpg");
-  cv::imwrite(file_name, face1);
+  if (det_images.empty()) {
+    cerr << "No face detected in image 1" << endl;
+    return 1;
+  }
 
-  std::cout << "Face1 saved at result1.jpg\n";
-  std::cout << "\n\n";
+  ImageRGB face1 = det_images[0].image;
+  image_save_bmp("result1.bmp", face1);
+
+  cout << "Face1 saved at result1.bmp\n";
+  cout << "\n\n";
 
   // Face2 Inference
-  image = cv::imread(argv[2]);
+  image = image_load_bmp(argv[2]);
+  if (image.empty()) {
+    cerr << "Failed to load image: " << argv[2] << endl;
+    return 1;
+  }
   det_images = model_face_det.inference(image);
 
-  cv::Mat face2 = det_images[0].image;
-  file_name = std::string("result2.jpg");
-  cv::imwrite(file_name, face2);
+  if (det_images.empty()) {
+    cerr << "No face detected in image 2" << endl;
+    return 1;
+  }
 
-  std::cout << "Face2 saved at result2.jpg\n";
-  std::cout << "\n\n";
+  ImageRGB face2 = det_images[0].image;
+  image_save_bmp("result2.bmp", face2);
+
+  cout << "Face2 saved at result2.bmp\n";
+  cout << "\n\n";
 
   MatchResult match_result = model_face_reg.match(face1, face2);
-  std::cout << "Face matching result (close to 1 mean look similar, over than 0.5 mean they might "
-               "be the same person): "
-            << match_result.dist << std::endl;
+  cout << "Face matching result (close to 1 mean look similar, over than 0.5 mean they might "
+          "be the same person): "
+       << match_result.dist << endl;
   if (match_result.similar)
-    std::cout << "Same person!\n";
+    cout << "Same person!\n";
   else
-    std::cout << "Different person!\n";
+    cout << "Different person!\n";
 }

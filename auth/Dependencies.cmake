@@ -17,7 +17,13 @@ set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_ROOT}/include")
 set(ONNXRUNTIME_LIB_DIR "${ONNXRUNTIME_ROOT}/lib")
 find_library(ONNXRUNTIME_LIB onnxruntime PATHS ${ONNXRUNTIME_LIB_DIR} NO_DEFAULT_PATH)
 
-find_package(OpenCV REQUIRED)
+# openpnp-capture (vendored, replaces OpenCV for camera capture)
+FetchContent_Declare(
+    openpnp-capture
+    GIT_REPOSITORY https://github.com/openpnp/openpnp-capture.git
+    GIT_TAG        v0.0.30
+)
+FetchContent_MakeAvailable(openpnp-capture)
 
 # yaml-cpp for config parsing
 find_package(yaml-cpp REQUIRED)

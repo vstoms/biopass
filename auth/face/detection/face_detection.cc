@@ -4,7 +4,7 @@
 
 #include "utils.h"
 
-FaceDetection::FaceDetection(const std::string &ckpt, const cv::Size &imgsz,
+FaceDetection::FaceDetection(const std::string &ckpt, int imgsz,
                              const std::vector<std::string> &classes, const bool &cuda,
                              const float conf, const float iou) {
   this->ckpt = ckpt;
@@ -45,15 +45,13 @@ void FaceDetection::load_model(const std::string &ckpt) {
     this->output_names_cstr.push_back(s.c_str());
 }
 
-std::vector<Detection> FaceDetection::inference(cv::Mat &image) {
+std::vector<Detection> FaceDetection::inference(const ImageRGB &image) {
   // Preprocess
-  cv::Mat input_image;
-  letterbox(image, input_image, {640, 640});
-  cv::cvtColor(input_image, input_image, cv::COLOR_BGR2RGB);
+  ImageRGB input_image = image_letterbox(image, this->imgsz, this->imgsz);
   std::vector<float> image_data = this->preprocess(input_image);
 
   // Inference
-  std::vector<int64_t> input_shape = {1, 3, this->imgsz.height, this->imgsz.width};
+  std::vector<int64_t> input_shape = {1, 3, (int64_t)this->imgsz, (int64_t)this->imgsz};
   auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
   Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
       memory_info, image_data.data(), image_data.size(), input_shape.data(), input_shape.size());
@@ -70,35 +68,24 @@ std::vector<Detection> FaceDetection::inference(cv::Mat &image) {
 
   // NMS
   auto raw_dets = non_max_suppression(output_data, num_preds, pred_dim, this->conf, this->iou);
-  scale_boxes({input_image.rows, input_image.cols}, raw_dets, {image.rows, image.cols});
+  scale_boxes({input_image.height, input_image.width}, raw_dets, {image.height, image.width});
 
   // Get detection results
   std::vector<Detection> results;
   for (auto &d : raw_dets) {
-    int x1 = d.x1;
-    int y1 = d.y1;
-    int x2 = d.x2;
-    int y2 = d.y2;
-    float det_conf = d.conf;
-    int cls = d.cls;
-
-    // Clip bounding box to image boundaries to prevent OpenCV assertion failures
-    x1 = std::max(0, x1);
-    y1 = std::max(0, y1);
-    x2 = std::min(image.cols, x2);
-    y2 = std::min(image.rows, y2);
-
-    cv::Rect box(x1, y1, x2 - x1, y2 - y1);
-    cv::Scalar color(0, 255, 0);
-    Box xyxy_box(x1, y1, x2, y2);
+    int x1 = std::max(0, (int)d.x1);
+    int y1 = std::max(0, (int)d.y1);
+    int x2 = std::min(image.width, (int)d.x2);
+    int y2 = std::min(image.height, (int)d.y2);
 
     // Ensure the box has positive area after clipping
-    if (box.width <= 0 || box.height <= 0) {
+    if (x2 - x1 <= 0 || y2 - y1 <= 0) {
       continue;
     }
 
-    cv::Mat crop_face = image(box);
-    Detection det(cls, std::string("face"), det_conf, box, xyxy_box, crop_face, color);
+    Box xyxy_box(x1, y1, x2, y2);
+    ImageRGB crop_face = image.crop(x1, y1, x2, y2);
+    Detection det(d.cls, std::string("face"), d.conf, xyxy_box, crop_face);
     results.push_back(det);
   }
 
@@ -106,18 +93,6 @@ std::vector<Detection> FaceDetection::inference(cv::Mat &image) {
   return results;
 }
 
-std::vector<float> FaceDetection::preprocess(cv::Mat &input_image) {
-  int h = input_image.rows;
-  int w = input_image.cols;
-  std::vector<float> data(3 * h * w);
-
-  // HWC -> CHW, normalize to [0,1]
-  for (int c = 0; c < 3; c++) {
-    for (int y = 0; y < h; y++) {
-      for (int x = 0; x < w; x++) {
-        data[c * h * w + y * w + x] = input_image.at<cv::Vec3b>(y, x)[c] / 255.0f;
-      }
-    }
-  }
-  return data;
+std::vector<float> FaceDetection::preprocess(const ImageRGB &input_image) {
+  return image_to_chw(input_image);
 }
