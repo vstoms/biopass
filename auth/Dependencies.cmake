@@ -27,7 +27,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(openpnp-capture)
 unset(CMAKE_POLICY_VERSION_MINIMUM CACHE)
 
-# stb: stb_image v2.30 / stb_image_write v1.16 (image read+write)
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git

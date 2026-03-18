@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include <CLI/CLI.hpp>
-#include <iostream>
 #include <memory>
 
 #include "auth_config.h"
@@ -21,7 +20,7 @@ int handle_crop_face(const std::string& inputPath, const std::string& outputPath
                      const std::string& modelPath) {
   ImageRGB image = image_load(inputPath);
   if (image.empty()) {
-    std::cerr << "Error: Could not read input image: " << inputPath << std::endl;
+    spdlog::error("Could not read input image: {}", inputPath);
     return 1;
   }
 
@@ -29,23 +28,23 @@ int handle_crop_face(const std::string& inputPath, const std::string& outputPath
   try {
     faceDetector = std::make_unique<FaceDetection>(modelPath);
   } catch (const std::exception& e) {
-    std::cerr << "Error: Failed to load detection model: " << e.what() << std::endl;
+    spdlog::error("Failed to load detection model: {}", e.what());
     return 1;
   }
 
   std::vector<Detection> detectedFaces = faceDetector->inference(image);
   if (detectedFaces.empty()) {
-    std::cerr << "Error: No face detected in the image" << std::endl;
+    spdlog::error("No face detected in the image");
     return 2;  // Special exit code for "no face detected"
   }
 
   ImageRGB faceCrop = detectedFaces[0].image;
   if (!image_save(outputPath, faceCrop)) {
-    std::cerr << "Error: Could not save cropped image to: " << outputPath << std::endl;
+    spdlog::error("Could not save cropped image to: {}", outputPath);
     return 1;
   }
 
-  std::cout << "Successfully cropped face and saved to: " << outputPath << std::endl;
+  spdlog::info("Successfully cropped face and saved to: {}", outputPath);
   return 0;
 }
 
@@ -125,7 +124,7 @@ int main(int argc, char** argv) {
   }
 
   if (username.empty()) {
-    std::cout << app.help() << std::endl;
+    spdlog::info("{}", app.help());
     return 2;  // PAM_IGNORE logic / error
   }
 

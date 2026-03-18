@@ -3,7 +3,6 @@
 #include <gio/gio.h>
 #include <spdlog/spdlog.h>
 
-#include <iostream>
 #include <thread>
 #include <vector>
 
@@ -78,7 +77,7 @@ bool FingerprintAuth::is_available() const {
                                                       nullptr, FPRINT_SERVICE, FPRINT_MANAGER_PATH,
                                                       FPRINT_MANAGER_INTERFACE, nullptr, &error);
   if (error) {
-    std::cerr << "Failed to connect to fprintd manager: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to connect to fprintd manager: {}", error->message);
     g_error_free(error);
     return false;
   }
@@ -109,7 +108,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
   if (!connection) {
-    std::cerr << "Failed to get system bus: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get system bus: {}", error->message);
     g_error_free(error);
     return AuthResult::Unavailable;
   }
@@ -120,7 +119,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                             FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get manager proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get manager proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(connection);
     return AuthResult::Unavailable;
@@ -130,8 +129,8 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   GVariant* dev_ret = g_dbus_proxy_call_sync(manager, "GetDefaultDevice", nullptr,
                                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
   if (!dev_ret) {
-    std::cerr << "No fingerprint device found: " << (error ? error->message : "Unknown")
-              << std::endl;
+    spdlog::error("FingerprintAuth: No fingerprint device found: {}",
+                  (error ? error->message : "Unknown"));
     if (error)
       g_error_free(error);
     g_object_unref(manager);
@@ -150,7 +149,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                             dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get device proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get device proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(manager);
     g_object_unref(connection);
@@ -163,8 +162,10 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!enrolled_ret) {
-    std::cerr << "Failed to list enrolled fingers (user might not exist or permission denied): "
-              << (error ? error->message : "") << std::endl;
+    spdlog::error(
+        "FingerprintAuth: Failed to list enrolled fingers (user might not exist or permission "
+        "denied): {}",
+        (error ? error->message : ""));
     if (error)
       g_error_free(error);
     g_object_unref(device);
@@ -184,7 +185,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   g_variant_unref(enrolled_ret);
 
   if (!has_fingers) {
-    std::cerr << "User " << username << " has no enrolled fingerprints." << std::endl;
+    spdlog::error("FingerprintAuth: User {} has no enrolled fingerprints.", username);
     g_object_unref(device);
     g_object_unref(manager);
     g_object_unref(connection);
@@ -198,7 +199,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!claim_ret) {
-    std::cerr << "Failed to claim device: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to claim device: {}", (error ? error->message : ""));
     if (error)
       g_error_free(error);
     g_object_unref(device);
@@ -214,7 +215,8 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                                                 G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!verify_ret) {
-    std::cerr << "Failed to start verification: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to start verification: {}",
+                  (error ? error->message : ""));
     if (error)
       g_error_free(error);
     // Release
@@ -274,7 +276,7 @@ std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::strin
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
   if (!connection) {
-    std::cerr << "Failed to get system bus: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get system bus: {}", error->message);
     g_error_free(error);
     return enrolled_fingers;
   }
@@ -285,7 +287,7 @@ std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::strin
                             FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get manager proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get manager proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(connection);
     return enrolled_fingers;
@@ -295,8 +297,8 @@ std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::strin
   GVariant* dev_ret = g_dbus_proxy_call_sync(manager, "GetDefaultDevice", nullptr,
                                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
   if (!dev_ret) {
-    std::cerr << "No fingerprint device found: " << (error ? error->message : "Unknown")
-              << std::endl;
+    spdlog::error("FingerprintAuth: No fingerprint device found: {}",
+                  (error ? error->message : "Unknown"));
     if (error)
       g_error_free(error);
     g_object_unref(manager);
@@ -315,7 +317,7 @@ std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::strin
                             dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get device proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get device proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(manager);
     g_object_unref(connection);
@@ -328,7 +330,8 @@ std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::strin
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!enrolled_ret) {
-    std::cerr << "Failed to list enrolled fingers: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to list enrolled fingers: {}",
+                  (error ? error->message : ""));
     if (error)
       g_error_free(error);
     g_object_unref(device);
@@ -360,7 +363,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
   if (!connection) {
-    std::cerr << "Failed to get system bus: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get system bus: {}", error->message);
     g_error_free(error);
     return false;
   }
@@ -371,7 +374,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
                             FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get manager proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get manager proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(connection);
     return false;
@@ -381,8 +384,8 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
   GVariant* dev_ret = g_dbus_proxy_call_sync(manager, "GetDefaultDevice", nullptr,
                                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
   if (!dev_ret) {
-    std::cerr << "No fingerprint device found: " << (error ? error->message : "Unknown")
-              << std::endl;
+    spdlog::error("FingerprintAuth: No fingerprint device found: {}",
+                  (error ? error->message : "Unknown"));
     if (error)
       g_error_free(error);
     g_object_unref(manager);
@@ -401,7 +404,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
                             dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get device proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get device proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(manager);
     g_object_unref(connection);
@@ -414,7 +417,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!claim_ret) {
-    std::cerr << "Failed to claim device: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to claim device: {}", (error ? error->message : ""));
     if (error)
       g_error_free(error);
     g_object_unref(device);
@@ -430,7 +433,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!enroll_start_ret) {
-    std::cerr << "Failed to start enrollment: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to start enrollment: {}", (error ? error->message : ""));
     if (error)
       g_error_free(error);
     // Release
@@ -470,7 +473,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
     g_variant_get(parameters, "(&sb)", &result, &done);
     std::string res_str = result;
 
-    std::cout << "Enrollment status: " << res_str << ", done: " << done << std::endl;
+    spdlog::info("Enrollment status: {}, done: {}", res_str, done);
 
     if (ctx->callback) {
       ctx->callback(done, result, ctx->user_data);
@@ -493,7 +496,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
     }
   };
 
-  std::cout << "Waiting for fingerprint enrollment..." << std::endl;
+  spdlog::info("Waiting for fingerprint enrollment...");
   guint sub_id = g_dbus_connection_signal_subscribe(
       connection, FPRINT_SERVICE, FPRINT_DEVICE_INTERFACE, "EnrollStatus", dev_path_str.c_str(),
       nullptr, G_DBUS_SIGNAL_FLAGS_NONE, on_enroll_status, &ctx, nullptr);
@@ -526,7 +529,7 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
   if (!connection) {
-    std::cerr << "Failed to get system bus: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get system bus: {}", error->message);
     g_error_free(error);
     return false;
   }
@@ -537,7 +540,7 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
                             FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get manager proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get manager proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(connection);
     return false;
@@ -547,8 +550,8 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
   GVariant* dev_ret = g_dbus_proxy_call_sync(manager, "GetDefaultDevice", nullptr,
                                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
   if (!dev_ret) {
-    std::cerr << "No fingerprint device found: " << (error ? error->message : "Unknown")
-              << std::endl;
+    spdlog::error("FingerprintAuth: No fingerprint device found: {}",
+                  (error ? error->message : "Unknown"));
     if (error)
       g_error_free(error);
     g_object_unref(manager);
@@ -567,7 +570,7 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
                             dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
 
   if (error) {
-    std::cerr << "Failed to get device proxy: " << error->message << std::endl;
+    spdlog::error("FingerprintAuth: Failed to get device proxy: {}", error->message);
     g_error_free(error);
     g_object_unref(manager);
     g_object_unref(connection);
@@ -580,8 +583,8 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
                              G_DBUS_CALL_FLAGS_NONE, -1, nullptr, &error);
 
   if (!claim_ret) {
-    std::cerr << "Failed to claim device for deletion: " << (error ? error->message : "")
-              << std::endl;
+    spdlog::error("FingerprintAuth: Failed to claim device for deletion: {}",
+                  (error ? error->message : ""));
     if (error)
       g_error_free(error);
     g_object_unref(device);
@@ -599,11 +602,12 @@ bool FingerprintAuth::remove_finger(const std::string& username, const std::stri
 
   bool success = false;
   if (delete_ret) {
-    std::cout << "Successfully removed fingerprint: " << finger_name << std::endl;
+    spdlog::info("Successfully removed fingerprint: {}", finger_name);
     success = true;
     g_variant_unref(delete_ret);
   } else {
-    std::cerr << "Failed to delete enrolled finger: " << (error ? error->message : "") << std::endl;
+    spdlog::error("FingerprintAuth: Failed to delete enrolled finger: {}",
+                  (error ? error->message : ""));
     if (error)
       g_error_free(error);
   }

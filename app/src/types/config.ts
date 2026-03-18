@@ -63,6 +63,5 @@ export interface VoiceMethodConfig {
 
 export interface ModelConfig {
   path: string;
-  name?: string;
   type: "detection" | "recognition" | "anti-spoofing" | "voice";
 }

@@ -1,14 +1,16 @@
 #include "face_auth.h"
 
-#include <chrono>
-#include <fstream>
-#include <iostream>
-#include <memory>
-#include <sstream>
-#include <thread>
+#include <openpnp-capture.h>
+#include <spdlog/spdlog.h>
 #include <unistd.h>
 
-#include <openpnp-capture.h>
+#include <chrono>
+#include <cstring>
+#include <fstream>
+#include <memory>
+#include <mutex>
+#include <sstream>
+#include <thread>
 
 #include "auth_config.h"
 #include "face_as.h"
@@ -17,6 +19,36 @@
 #include "image_utils.h"
 
 namespace biopass {
+
+namespace {
+void capture_log_callback(uint32_t level, const char *message) {
+  if (!message)
+    return;
+  if (std::strstr(message, "tjDecompressHeader2 failed: No error") != nullptr) {
+    return;
+  }
+
+  std::string msg(message);
+  while (!msg.empty() && (msg.back() == '\n' || msg.back() == '\r')) {
+    msg.pop_back();
+  }
+
+  if (level <= 3) {
+    spdlog::error("openpnp-capture: {}", msg);
+  } else if (level == 4) {
+    spdlog::warn("openpnp-capture: {}", msg);
+  } else if (level >= 7) {
+    spdlog::debug("openpnp-capture: {}", msg);
+  } else {
+    spdlog::info("openpnp-capture: {}", msg);
+  }
+}
+
+void configure_capture_logging_once() {
+  static std::once_flag once;
+  std::call_once(once, []() { Cap_installCustomLogFunction(capture_log_callback); });
+}
+}  // namespace
 
 std::string get_timestamp_string() {
   auto now = std::chrono::system_clock::now().time_since_epoch();
@@ -30,21 +62,25 @@ void save_failed_face(const std::string &username, const ImageRGB &face,
   std::string failedFacePath =
       biopass::debug_path(username) + "/" + reason + "." + get_timestamp_string() + ".jpg";
   if (!image_save(failedFacePath, face)) {
-    std::cerr << "FaceAuth: Could not save failed face to " << failedFacePath << std::endl;
+    spdlog::error("FaceAuth: Could not save failed face to {}", failedFacePath);
   }
 }
 
 bool FaceAuth::is_available() const {
+  configure_capture_logging_once();
   CapContext ctx = Cap_createContext();
-  if (!ctx) return false;
+  if (!ctx)
+    return false;
   uint32_t count = Cap_getDeviceCount(ctx);
   Cap_releaseContext(ctx);
   return count > 0;
 }
 
 static ImageRGB capture_frame_from_camera() {
+  configure_capture_logging_once();
   CapContext ctx = Cap_createContext();
-  if (!ctx) return {};
+  if (!ctx)
+    return {};
 
   uint32_t count = Cap_getDeviceCount(ctx);
   if (count == 0) {
@@ -93,21 +129,20 @@ static ImageRGB capture_frame_from_camera() {
 AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig &config,
                                   std::atomic<bool> *cancel_signal) {
   if (!this->is_available()) {
-    std::cerr << "FaceAuth: Could not open camera" << std::endl;
+    spdlog::error("FaceAuth: Could not open camera");
     return AuthResult::Unavailable;
   }
 
   std::vector<std::string> enrolledFaces = biopass::list_user_faces(username);
   if (enrolledFaces.empty()) {
-    std::cerr << "FaceAuth: No face enrolled for user " << username << ", skipping" << std::endl;
+    spdlog::error("FaceAuth: No face enrolled for user {}, skipping", username);
     return AuthResult::Unavailable;
   }
 
   std::string recogModelPath = face_config_.recognition.model;
   std::string detectModelPath = face_config_.detection.model;
   if (!std::ifstream(recogModelPath).good() || !std::ifstream(detectModelPath).good()) {
-    std::cerr << "FaceAuth: Model files not found for user " << username << ", skipping"
-              << std::endl;
+    spdlog::error("FaceAuth: Model files not found for user {}, skipping", username);
     return AuthResult::Unavailable;
   }
   std::unique_ptr<FaceRecognition> faceReg;
@@ -119,7 +154,7 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
     size_t first_line = msg.find('\n');
     if (first_line != std::string::npos)
       msg = msg.substr(0, first_line);
-    std::cerr << "FaceAuth: Failed to load detection model: " << msg << ", skipping" << std::endl;
+    spdlog::error("FaceAuth: Failed to load detection model: {}, skipping", msg);
     return AuthResult::Unavailable;
   }
   try {
@@ -129,7 +164,7 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
     size_t first_line = msg.find('\n');
     if (first_line != std::string::npos)
       msg = msg.substr(0, first_line);
-    std::cerr << "FaceAuth: Failed to load recognition model: " << msg << ", skipping" << std::endl;
+    spdlog::error("FaceAuth: Failed to load recognition model: {}, skipping", msg);
     return AuthResult::Unavailable;
   }
 
@@ -139,13 +174,13 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
 
   ImageRGB loginFace = capture_frame_from_camera();
   if (loginFace.empty()) {
-    std::cerr << "FaceAuth: Could not read frame" << std::endl;
+    spdlog::error("FaceAuth: Could not read frame");
     return AuthResult::Retry;
   }
 
   std::vector<Detection> detectedImages = faceDetector->inference(loginFace);
   if (detectedImages.empty()) {
-    std::cerr << "FaceAuth: No face detected" << std::endl;
+    spdlog::error("FaceAuth: No face detected");
     return AuthResult::Retry;
   }
 
@@ -157,15 +192,14 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
       FaceAntiSpoofing faceAs(asModelPath);
       SpoofResult spoofCheck = faceAs.inference(face);
       if (spoofCheck.spoof) {
-        std::cerr << "FaceAuth: Spoof detected, score: " << spoofCheck.score << std::endl;
+        spdlog::warn("FaceAuth: Spoof detected, score: {}", spoofCheck.score);
         if (config.debug) {
           save_failed_face(username, face, "spoof");
         }
         return AuthResult::Retry;
       }
     } catch (const std::exception &e) {
-      std::cerr << "FaceAuth: Anti-spoofing model failed: " << e.what() << ", skipping check"
-                << std::endl;
+      spdlog::error("FaceAuth: Anti-spoofing model failed: {}, skipping check", e.what());
     }
   }
 

@@ -9,7 +9,7 @@ pub mod voice;
 use config::{get_config_path_str, load_config, save_config};
 use face::{delete_face_image, list_face_images, save_face_image};
 use file_utils::{check_file_exists, delete_file};
-use system::{get_current_username, list_video_devices};
+use system::{get_current_username, list_video_devices, supports_system_signin_integration};
 use voice::{delete_voice_recording, list_voice_recordings, save_voice_recording};
 
 pub mod fingerprint;
@@ -63,6 +63,7 @@ pub fn run() {
             list_face_images,
             list_voice_recordings,
             list_video_devices,
+            supports_system_signin_integration,
             delete_face_image,
             delete_voice_recording,
             check_file_exists,

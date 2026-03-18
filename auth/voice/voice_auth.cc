@@ -1,6 +1,6 @@
 #include "voice_auth.h"
 
-#include <iostream>
+#include <spdlog/spdlog.h>
 
 namespace biopass {
 
@@ -15,7 +15,7 @@ AuthResult VoiceAuth::authenticate(const std::string &username, const AuthConfig
   (void)username;  // Suppress unused parameter warning
   (void)config;
 
-  std::cerr << "VoiceAuth: Not implemented yet" << std::endl;
+  spdlog::error("VoiceAuth: Not implemented yet");
   return AuthResult::Unavailable;
 }
 

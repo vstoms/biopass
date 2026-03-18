@@ -72,7 +72,7 @@ export function ModelSelectField({
               <SelectItem key={model.path} value={model.path}>
                 <div className="flex items-center gap-3 pr-6">
                   <span className="truncate">
-                    {model.name || model.path.split("/").pop()}
+                    {model.path.split("/").pop()}
                   </span>
                   <ModelStatus
                     status={statusMap[model.path]}

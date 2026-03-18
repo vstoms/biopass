@@ -49,6 +49,8 @@ function ModelFileFolderButton({ path }: { path: string }) {
 }
 
 export function ModelCard({ model, status }: ModelCardProps) {
+  const filename = model.path.split(/[/]/).pop() || model.path;
+
   return (
     <div className="group relative flex flex-col gap-4 p-5 rounded-xl border border-border bg-linear-to-b from-card to-muted/20 shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300">
       <div className="flex sm:flex-row sm:items-start justify-between gap-4">
@@ -60,11 +62,9 @@ export function ModelCard({ model, status }: ModelCardProps) {
             <div className="flex items-center gap-4">
               <h3
                 className="font-semibold leading-none truncate max-w-100"
-                title={model.name}
+                title={filename}
               >
-                {model.name || (
-                  <span className="text-muted-foreground italic">Unnamed</span>
-                )}
+                {filename}
               </h3>
               <p className="text-xs text-muted-foreground capitalize mt-1 block">
                 {model.type}

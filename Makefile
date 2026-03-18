@@ -32,7 +32,10 @@ package: package-app
 build-auth:
 	@echo "==> [auth] Configuring CMake (BUILD_TYPE=$(BUILD_TYPE))…"
 	cmake -S auth -B $(AUTH_BUILD) \
+	      -Wno-deprecated \
 	      -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+	      -DCMAKE_WARN_DEPRECATED=OFF \
+	      -DCMAKE_ERROR_DEPRECATED=OFF \
 	      -DPROJECT_VERSION=$(VERSION)
 	@echo "==> [auth] Building…"
 	cmake --build $(AUTH_BUILD) --config $(BUILD_TYPE) --parallel

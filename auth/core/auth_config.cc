@@ -1,12 +1,12 @@
 #include "auth_config.h"
 
 #include <pwd.h>
+#include <spdlog/spdlog.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 
 namespace biopass {
 
@@ -149,10 +149,9 @@ BiopassConfig load_config(const std::string &username) {
       config.methods = enabled;
     }
   } catch (const YAML::BadFile &e) {
-    std::cerr << "Biopass: Config file not found at " << config_path << ", using defaults"
-              << std::endl;
+    spdlog::warn("Biopass: Config file not found at {}, using defaults", config_path);
   } catch (const YAML::Exception &e) {
-    std::cerr << "Biopass: Failed to parse config: " << e.what() << ", using defaults" << std::endl;
+    spdlog::error("Biopass: Failed to parse config: {}, using defaults", e.what());
   }
 
   return config;

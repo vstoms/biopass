@@ -12,13 +12,22 @@ import { validateConfig } from "./validation";
 export function ConfigPage() {
   const [config, setConfig] = useState<BiopassConfig | null>(null);
   const [savedConfig, setSavedConfig] = useState<BiopassConfig | null>(null);
+  const [pamIntegrationSupported, setPamIntegrationSupported] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
   const initConfig = useCallback(async () => {
     try {
       setLoading(true);
+      const isPamSupported = await invoke<boolean>(
+        "supports_system_signin_integration",
+      ).catch(() => false);
+      setPamIntegrationSupported(isPamSupported);
+
       const loadedConfig = await invoke<BiopassConfig>("load_config");
+      if (!isPamSupported) {
+        loadedConfig.strategy.pam_enabled = false;
+      }
       setConfig(loadedConfig);
       setSavedConfig(loadedConfig);
     } catch (err) {
@@ -43,18 +52,24 @@ export function ConfigPage() {
       await invoke("save_config", { config });
       setSavedConfig(config);
 
-      // Apply PAM configuration
-      try {
-        await invoke("apply_pam_config");
-        toast.success("Settings saved successfully!");
-      } catch (pamErr) {
-        console.error("Failed to apply PAM config:", pamErr);
-        // Special handling for user cancelation of pkexec
-        if (pamErr?.toString().includes("cancelled")) {
-          toast.warning("Config saved, but system integration was cancelled.");
-        } else {
-          toast.error(`Failed to apply system settings: ${pamErr}`);
+      if (pamIntegrationSupported) {
+        // Apply PAM configuration
+        try {
+          await invoke("apply_pam_config");
+          toast.success("Settings saved successfully!");
+        } catch (pamErr) {
+          console.error("Failed to apply PAM config:", pamErr);
+          // Special handling for user cancelation of pkexec
+          if (pamErr?.toString().includes("cancelled")) {
+            toast.warning(
+              "Config saved, but system integration was cancelled.",
+            );
+          } else {
+            toast.error(`Failed to apply system settings: ${pamErr}`);
+          }
         }
+      } else {
+        toast.success("Settings saved successfully!");
       }
     } catch (err) {
       console.error("Failed to save config:", err);
@@ -112,6 +127,7 @@ export function ConfigPage() {
       <div className="grid gap-6">
         <StrategySection
           strategy={config.strategy}
+          pamIntegrationSupported={pamIntegrationSupported}
           onChange={(strategy: typeof config.strategy) =>
             setConfig({ ...config, strategy })
           }
