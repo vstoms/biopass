@@ -17,7 +17,7 @@ set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_ROOT}/include")
 set(ONNXRUNTIME_LIB_DIR "${ONNXRUNTIME_ROOT}/lib")
 find_library(ONNXRUNTIME_LIB onnxruntime PATHS ${ONNXRUNTIME_LIB_DIR} NO_DEFAULT_PATH)
 
-# openpnp-capture (vendored, replaces OpenCV for camera capture)
+# openpnp-capture (replaces OpenCV for camera capture)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 FetchContent_Declare(
     openpnp-capture
@@ -27,11 +27,11 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(openpnp-capture)
 unset(CMAKE_POLICY_VERSION_MINIMUM CACHE)
 
-# stb (header-only image I/O: JPEG/PNG/BMP/TGA read+write)
+# stb: stb_image v2.30 / stb_image_write v1.16 (image read+write)
 FetchContent_Declare(
     stb
     GIT_REPOSITORY https://github.com/nothings/stb.git
-    GIT_TAG        master
+    GIT_TAG        904aa67e1e2d1dec92959df63e700b166d5c1022
 )
 FetchContent_MakeAvailable(stb)
 set(STB_INCLUDE_DIRS "${stb_SOURCE_DIR}")
