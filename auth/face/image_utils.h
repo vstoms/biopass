@@ -9,6 +9,9 @@
 #include <string>
 #include <vector>
 
+#include "stb/stb_image.h"
+#include "stb/stb_image_write.h"
+
 /**
  * Minimal RGB image container replacing cv::Mat.
  * Stores 3-channel (RGB) uint8 data in row-major order.
@@ -127,99 +130,74 @@ inline std::vector<float> image_to_chw(const ImageRGB &img) {
  * HWC RGB uint8 -> CHW float, with mean/std normalization.
  */
 inline std::vector<float> image_to_chw_normalized(const ImageRGB &img, const float mean[3],
-                                                  const float std[3]) {
+                                                  const float std_val[3]) {
   int h = img.height, w = img.width;
   std::vector<float> out(3 * h * w);
   for (int c = 0; c < 3; c++)
     for (int y = 0; y < h; y++)
       for (int x = 0; x < w; x++)
-        out[c * h * w + y * w + x] = (img.at(y, x, c) / 255.0f - mean[c]) / std[c];
+        out[c * h * w + y * w + x] = (img.at(y, x, c) / 255.0f - mean[c]) / std_val[c];
   return out;
 }
 
+namespace {
+inline std::string path_extension_lower(const std::string &path) {
+  size_t dot = path.rfind('.');
+  if (dot == std::string::npos) return "";
+  std::string ext = path.substr(dot);
+  for (auto &ch : ext) ch = (char)std::tolower((unsigned char)ch);
+  return ext;
+}
+}  // namespace
+
 /**
- * Save image as BMP file (RGB input).
+ * Load image from any supported format (JPEG, PNG, BMP, GIF, TGA, PSD, HDR, PIC, PNM).
+ * Automatically detects format from file contents via stb_image.
  */
-#pragma pack(push, 1)
-struct BMPFileHeader {
-  uint16_t sig = 0x4D42;
-  uint32_t file_size;
-  uint16_t r1 = 0, r2 = 0;
-  uint32_t data_offset = 54;
-  uint32_t hdr_size = 40;
-  int32_t bmp_width;
-  int32_t bmp_height;
-  uint16_t planes = 1;
-  uint16_t bpp = 24;
-  uint32_t compression = 0;
-  uint32_t img_size;
-  int32_t xppm = 2835, yppm = 2835;
-  uint32_t clr_used = 0, clr_imp = 0;
-};
-#pragma pack(pop)
+inline ImageRGB image_load(const std::string &path) {
+  int w = 0, h = 0, channels = 0;
+  uint8_t *pixels = stbi_load(path.c_str(), &w, &h, &channels, 3);
+  if (!pixels) return {};
 
-inline bool image_save_bmp(const std::string &path, const ImageRGB &img) {
-  uint32_t row_stride = (img.width * 3 + 3) & ~3u;
-  uint32_t img_size = row_stride * img.height;
-  BMPFileHeader hdr;
-  hdr.file_size = 54 + img_size;
-  hdr.bmp_width = img.width;
-  hdr.bmp_height = img.height;
-  hdr.img_size = img_size;
-
-  FILE *f = fopen(path.c_str(), "wb");
-  if (!f) return false;
-  fwrite(&hdr, 1, 54, f);
-
-  uint32_t pad = row_stride - img.width * 3;
-  uint8_t zeros[3] = {};
-  for (int y = img.height - 1; y >= 0; y--) {
-    for (int x = 0; x < img.width; x++) {
-      uint8_t bgr[3] = {img.at(y, x, 2), img.at(y, x, 1), img.at(y, x, 0)};
-      fwrite(bgr, 1, 3, f);
-    }
-    if (pad) fwrite(zeros, 1, pad, f);
-  }
-  fclose(f);
-  return true;
+  ImageRGB img(w, h, pixels);
+  stbi_image_free(pixels);
+  return img;
 }
 
 /**
- * Load BMP file as RGB image.
+ * Save image to file. Format is determined by file extension:
+ *   .jpg / .jpeg  -> JPEG (quality 95)
+ *   .png          -> PNG
+ *   .bmp          -> BMP
+ *   .tga          -> TGA
+ * Returns false on unsupported extension or write failure.
  */
-inline ImageRGB image_load_bmp(const std::string &path) {
-  FILE *f = fopen(path.c_str(), "rb");
-  if (!f) return {};
+inline bool image_save(const std::string &path, const ImageRGB &img) {
+  if (img.empty()) return false;
 
-  BMPFileHeader hdr;
-  if (fread(&hdr, 1, 54, f) != 54 || hdr.sig != 0x4D42 || hdr.bpp != 24) {
-    fclose(f);
-    return {};
+  std::string ext = path_extension_lower(path);
+  int stride = img.width * 3;
+
+  if (ext == ".jpg" || ext == ".jpeg") {
+    return stbi_write_jpg(path.c_str(), img.width, img.height, 3, img.ptr(), 95) != 0;
+  } else if (ext == ".png") {
+    return stbi_write_png(path.c_str(), img.width, img.height, 3, img.ptr(), stride) != 0;
+  } else if (ext == ".bmp") {
+    return stbi_write_bmp(path.c_str(), img.width, img.height, 3, img.ptr()) != 0;
+  } else if (ext == ".tga") {
+    return stbi_write_tga(path.c_str(), img.width, img.height, 3, img.ptr()) != 0;
   }
 
-  int w = hdr.bmp_width;
-  int h = std::abs(hdr.bmp_height);
-  bool top_down = (hdr.bmp_height < 0);
-  uint32_t row_stride = (w * 3 + 3) & ~3u;
+  // Fallback: save as PNG
+  return stbi_write_png(path.c_str(), img.width, img.height, 3, img.ptr(), stride) != 0;
+}
 
-  fseek(f, hdr.data_offset, SEEK_SET);
-  ImageRGB img(w, h);
-  std::vector<uint8_t> row_buf(row_stride);
-
-  for (int y = 0; y < h; y++) {
-    int dst_y = top_down ? y : (h - 1 - y);
-    if (fread(row_buf.data(), 1, row_stride, f) != row_stride) {
-      fclose(f);
-      return {};
-    }
-    for (int x = 0; x < w; x++) {
-      img.at(dst_y, x, 0) = row_buf[x * 3 + 2];  // B -> R
-      img.at(dst_y, x, 1) = row_buf[x * 3 + 1];  // G -> G
-      img.at(dst_y, x, 2) = row_buf[x * 3 + 0];  // R -> B
-    }
-  }
-  fclose(f);
-  return img;
+/**
+ * Backward-compatible aliases.
+ */
+inline ImageRGB image_load_bmp(const std::string &path) { return image_load(path); }
+inline bool image_save_bmp(const std::string &path, const ImageRGB &img) {
+  return image_save(path, img);
 }
 
 #endif  // IMAGE_UTILS_H

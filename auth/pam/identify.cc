@@ -5,6 +5,8 @@
 
 #include <openpnp-capture.h>
 
+using namespace std;
+
 namespace uuid {
 static std::random_device rd;
 static std::mt19937 gen(rd());
@@ -36,8 +38,8 @@ string v4() {
 
 namespace {
 bool save_failed_face(const string &username, const ImageRGB &face, const string &reason) {
-  string failedFacePath = biopass::debug_path(username) + "/" + reason + "." + uuid::v4() + ".bmp";
-  if (!image_save_bmp(failedFacePath, face)) {
+  string failedFacePath = biopass::debug_path(username) + "/" + reason + "." + uuid::v4() + ".jpg";
+  if (!image_save(failedFacePath, face)) {
     cerr << "ERROR: Could not save failed face to " << failedFacePath << endl;
     return false;
   }
@@ -181,7 +183,7 @@ int scan_face(const string &username, const biopass::FaceMethodConfig &face_conf
     // Match against all enrolled faces — succeed if any match
     bool matched = false;
     for (const auto &facePath : enrolledFaces) {
-      ImageRGB preparedFace = image_load_bmp(facePath);
+      ImageRGB preparedFace = image_load(facePath);
       if (preparedFace.empty())
         continue;
       MatchResult match = faceReg->match(preparedFace, face);

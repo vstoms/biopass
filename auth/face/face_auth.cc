@@ -28,8 +28,8 @@ void save_failed_face(const std::string &username, const ImageRGB &face,
                       const std::string &reason) {
   biopass::setup_config(username);
   std::string failedFacePath =
-      biopass::debug_path(username) + "/" + reason + "." + get_timestamp_string() + ".bmp";
-  if (!image_save_bmp(failedFacePath, face)) {
+      biopass::debug_path(username) + "/" + reason + "." + get_timestamp_string() + ".jpg";
+  if (!image_save(failedFacePath, face)) {
     std::cerr << "FaceAuth: Could not save failed face to " << failedFacePath << std::endl;
   }
 }
@@ -171,7 +171,7 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
 
   // Match against all enrolled faces — succeed if any match
   for (const auto &facePath : enrolledFaces) {
-    ImageRGB preparedFace = image_load_bmp(facePath);
+    ImageRGB preparedFace = image_load(facePath);
     if (preparedFace.empty())
       continue;
     MatchResult match = faceReg->match(preparedFace, face);

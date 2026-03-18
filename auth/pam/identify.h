@@ -9,6 +9,7 @@
 #include <iostream>
 #include <random>
 #include <sstream>
+#include <string>
 #include <thread>
 
 #include "auth_config.h"
@@ -17,6 +18,6 @@
 #include "face_recognition.h"
 #include "image_utils.h"
 
-int scan_face(const string &username, const biopass::FaceMethodConfig &face_config, int8_t retries,
-              const int gap, bool anti_spoofing = false);
+int scan_face(const std::string &username, const biopass::FaceMethodConfig &face_config,
+              int8_t retries, const int gap, bool anti_spoofing = false);
 #endif

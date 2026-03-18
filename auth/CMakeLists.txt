@@ -19,17 +19,17 @@ set(CMAKE_SKIP_BUILD_RPATH FALSE)
 # Dependencies Configuration
 include(Dependencies.cmake)
 
+# Export Face Includes dynamically from Source
+set(FaceDetection_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/detection)
+set(FaceRecognition_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/recognition)
+set(FaceAntiSpoof_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/antispoofing)
+
 # Application Directories
 add_subdirectory(core)
 add_subdirectory(face)
 add_subdirectory(voice)
 add_subdirectory(fingerprint)
 add_subdirectory(pam)
-
-# Export Face Includes dynamically from Source
-set(FaceDetection_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/detection)
-set(FaceRecognition_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/recognition)
-set(FaceAntiSpoof_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/antispoofing)
 
 # Testing Directories
 option(BUILD_TESTS "Build test configurations" OFF)

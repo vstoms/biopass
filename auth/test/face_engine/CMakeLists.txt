@@ -10,4 +10,5 @@ target_link_libraries(${FACE_TEST} PRIVATE
     ${ONNXRUNTIME_LIB}
     biopass_det
     biopass_reg
+    biopass_stb
 )

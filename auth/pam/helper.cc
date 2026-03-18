@@ -19,7 +19,7 @@
 
 int handle_crop_face(const std::string& inputPath, const std::string& outputPath,
                      const std::string& modelPath) {
-  ImageRGB image = image_load_bmp(inputPath);
+  ImageRGB image = image_load(inputPath);
   if (image.empty()) {
     std::cerr << "Error: Could not read input image: " << inputPath << std::endl;
     return 1;
@@ -40,7 +40,7 @@ int handle_crop_face(const std::string& inputPath, const std::string& outputPath
   }
 
   ImageRGB faceCrop = detectedFaces[0].image;
-  if (!image_save_bmp(outputPath, faceCrop)) {
+  if (!image_save(outputPath, faceCrop)) {
     std::cerr << "Error: Could not save cropped image to: " << outputPath << std::endl;
     return 1;
   }

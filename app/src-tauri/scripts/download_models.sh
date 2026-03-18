@@ -4,10 +4,12 @@
 
 set -euo pipefail
 
+BASE_URL="https://media.githubusercontent.com/media/TickLabVN/biopass/refs/heads/facelib/auth/face/models"
+
 MODELS=(
-    "https://biopass.ticklab.site/models/yolov11n-face.torchscript|yolov11n-face.torchscript"
-    "https://biopass.ticklab.site/models/edgeface_s_gamma_05_ts.pt|edgeface_s_gamma_05_ts.pt"
-    "https://biopass.ticklab.site/models/mobilenetv3_antispoof_ts.pt|mobilenetv3_antispoof_ts.pt"
+    "${BASE_URL}/yolov8n-face.onnx?download=true|yolov8n-face.onnx"
+    "${BASE_URL}/edgeface_s_gamma_05.onnx?download=true|edgeface_s_gamma_05.onnx"
+    "${BASE_URL}/mobilenetv3_antispoof.onnx?download=true|mobilenetv3_antispoof.onnx"
 )
 
 # Determine the data dir. If running as root (e.g. system-wide install),

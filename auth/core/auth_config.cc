@@ -200,8 +200,14 @@ std::vector<std::string> list_user_faces(const std::string &username) {
     std::string name(entry->d_name);
     if (name.size() > 4) {
       std::string ext = name.substr(name.size() - 4);
-      if (ext == ".jpg" || ext == ".JPG" || ext == ".png" || ext == ".PNG") {
+      if (ext == ".jpg" || ext == ".JPG" || ext == ".png" || ext == ".PNG" || ext == ".bmp" ||
+          ext == ".BMP" || ext == ".tga" || ext == ".TGA") {
         faces.push_back(dir + "/" + name);
+      } else if (name.size() > 5) {
+        std::string ext5 = name.substr(name.size() - 5);
+        if (ext5 == ".jpeg" || ext5 == ".JPEG") {
+          faces.push_back(dir + "/" + name);
+        }
       }
     }
   }
