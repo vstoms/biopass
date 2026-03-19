@@ -5,9 +5,16 @@
 # ONNX Runtime
 set(ONNXRUNTIME_VERSION "1.19.2")
 include(FetchContent)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(ONNXRUNTIME_ARCH "linux-aarch64")
+else()
+    set(ONNXRUNTIME_ARCH "linux-x64")
+endif()
+
 FetchContent_Declare(
     onnxruntime
-    URL https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-linux-x64-${ONNXRUNTIME_VERSION}.tgz
+    URL https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz
     DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
 FetchContent_MakeAvailable(onnxruntime)
