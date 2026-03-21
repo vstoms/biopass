@@ -99,7 +99,6 @@ pub struct VoiceMethodConfig {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModelConfig {
     pub path: String,
-    pub name: Option<String>,
     #[serde(rename = "type")]
     pub model_type: String,
 }
@@ -147,16 +146,16 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
                 retries: 5,
                 retry_delay: 200,
                 detection: DetectionConfig {
-                    model: model_path("yolov11n-face.torchscript"),
+                    model: model_path("yolov8n-face.onnx"),
                     threshold: 0.8,
                 },
                 recognition: RecognitionConfig {
-                    model: model_path("edgeface_s_gamma_05_ts.pt"),
+                    model: model_path("edgeface_s_gamma_05.onnx"),
                     threshold: 0.8,
                 },
                 anti_spoofing: AntiSpoofingConfig {
                     enable: true,
-                    model: model_path("mobilenetv3_antispoof_ts.pt"),
+                    model: model_path("mobilenetv3_antispoof.onnx"),
                     threshold: 0.8,
                 },
                 ir_camera: IRCameraConfig {
@@ -180,18 +179,15 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
         },
         models: vec![
             ModelConfig {
-                path: model_path("yolov11n-face.torchscript"),
-                name: Some("Face Detection".to_string()),
+                path: model_path("yolov8n-face.onnx"),
                 model_type: "detection".to_string(),
             },
             ModelConfig {
-                path: model_path("edgeface_s_gamma_05_ts.pt"),
-                name: Some("Face Recognition".to_string()),
+                path: model_path("edgeface_s_gamma_05.onnx"),
                 model_type: "recognition".to_string(),
             },
             ModelConfig {
-                path: model_path("mobilenetv3_antispoof_ts.pt"),
-                name: Some("Face Anti-spoofing".to_string()),
+                path: model_path("mobilenetv3_antispoof.onnx"),
                 model_type: "anti-spoofing".to_string(),
             },
         ],

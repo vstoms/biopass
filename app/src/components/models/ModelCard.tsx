@@ -31,7 +31,7 @@ function ModelFileFolderButton({ path }: { path: string }) {
           <button
             type="button"
             onClick={() => handleOpenFileFolder(path)}
-            className="text-[10px] font-mono text-muted-foreground opacity-60 truncate max-w-[150px] bg-muted/50 px-1.5 py-0.5 rounded hover:opacity-100 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer"
+            className="text-[10px] font-mono text-muted-foreground opacity-60 truncate max-w-37.5 bg-muted/50 px-1.5 py-0.5 rounded hover:opacity-100 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer"
           >
             {path.split(/[/]/).pop()}
           </button>
@@ -39,7 +39,7 @@ function ModelFileFolderButton({ path }: { path: string }) {
         <TooltipContent
           side="bottom"
           align="end"
-          className="max-w-[300px] break-all"
+          className="max-w-75 break-all"
         >
           <p className="font-mono text-xs">{path}</p>
         </TooltipContent>
@@ -49,6 +49,8 @@ function ModelFileFolderButton({ path }: { path: string }) {
 }
 
 export function ModelCard({ model, status }: ModelCardProps) {
+  const filename = model.path.split(/[/]/).pop() || model.path;
+
   return (
     <div className="group relative flex flex-col gap-4 p-5 rounded-xl border border-border bg-linear-to-b from-card to-muted/20 shadow-sm hover:border-primary/30 hover:shadow-md transition-all duration-300">
       <div className="flex sm:flex-row sm:items-start justify-between gap-4">
@@ -59,15 +61,13 @@ export function ModelCard({ model, status }: ModelCardProps) {
           <div>
             <div className="flex items-center gap-4">
               <h3
-                className="font-semibold leading-none truncate max-w-[140px]"
-                title={model.name}
+                className="font-semibold leading-none truncate max-w-100"
+                title={filename}
               >
-                {model.name || (
-                  <span className="text-muted-foreground italic">Unnamed</span>
-                )}
+                {filename}
               </h3>
               <p className="text-xs text-muted-foreground capitalize mt-1 block">
-                {model.type} Recognition
+                {model.type}
               </p>
             </div>
             <ModelFileFolderButton path={model.path} />

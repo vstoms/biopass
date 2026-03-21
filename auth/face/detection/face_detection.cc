@@ -4,7 +4,7 @@
 
 #include "utils.h"
 
-FaceDetection::FaceDetection(const std::string &ckpt, const cv::Size &imgsz,
+FaceDetection::FaceDetection(const std::string &ckpt, int imgsz,
                              const std::vector<std::string> &classes, const bool &cuda,
                              const float conf, const float iou) {
   this->ckpt = ckpt;
@@ -13,65 +13,79 @@ FaceDetection::FaceDetection(const std::string &ckpt, const cv::Size &imgsz,
   this->conf = conf;
   this->iou = iou;
   this->classes = classes;
-  if (this->cuda)
-    this->device = torch::Device(torch::kCUDA);
-  else
-    this->device = torch::Device(torch::kCPU);
 
   this->load_model(ckpt);
 }
 
 void FaceDetection::load_model(const std::string &ckpt) {
   this->ckpt = ckpt;
-  this->model = torch::jit::load(this->ckpt);
-  this->model.eval();
-  this->model.to(this->device, torch::kFloat32);
+
+  Ort::SessionOptions opts;
+  opts.SetIntraOpNumThreads(1);
+  opts.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+
+  this->session = std::make_unique<Ort::Session>(this->env, ckpt.c_str(), opts);
+
+  this->input_names_str.clear();
+  this->output_names_str.clear();
+  this->input_names_cstr.clear();
+  this->output_names_cstr.clear();
+
+  for (size_t i = 0; i < this->session->GetInputCount(); i++) {
+    auto name = this->session->GetInputNameAllocated(i, this->allocator);
+    this->input_names_str.push_back(name.get());
+  }
+  for (size_t i = 0; i < this->session->GetOutputCount(); i++) {
+    auto name = this->session->GetOutputNameAllocated(i, this->allocator);
+    this->output_names_str.push_back(name.get());
+  }
+  for (auto &s : this->input_names_str)
+    this->input_names_cstr.push_back(s.c_str());
+  for (auto &s : this->output_names_str)
+    this->output_names_cstr.push_back(s.c_str());
 }
 
-std::vector<Detection> FaceDetection::inference(cv::Mat &image) {
+std::vector<Detection> FaceDetection::inference(const ImageRGB &image) {
   // Preprocess
-  cv::Mat input_image;
-  letterbox(image, input_image, {640, 640});
-  cv::cvtColor(input_image, input_image, cv::COLOR_BGR2RGB);
-  torch::Tensor image_tensor = this->preprocess(input_image);
-  std::vector<torch::jit::IValue> inputs{image_tensor};
+  ImageRGB input_image = image_letterbox(image, this->imgsz, this->imgsz);
+  std::vector<float> image_data = this->preprocess(input_image);
 
   // Inference
-  torch::Tensor output = this->model.forward(inputs).toTensor().cpu();
+  std::vector<int64_t> input_shape = {1, 3, (int64_t)this->imgsz, (int64_t)this->imgsz};
+  auto memory_info = Ort::MemoryInfo::CreateCpu(OrtArenaAllocator, OrtMemTypeDefault);
+  Ort::Value input_tensor = Ort::Value::CreateTensor<float>(
+      memory_info, image_data.data(), image_data.size(), input_shape.data(), input_shape.size());
+
+  auto output_tensors =
+      this->session->Run(Ort::RunOptions{nullptr}, this->input_names_cstr.data(), &input_tensor, 1,
+                         this->output_names_cstr.data(), this->output_names_cstr.size());
+
+  auto &out = output_tensors[0];
+  auto shape = out.GetTensorTypeAndShapeInfo().GetShape();
+  int pred_dim = static_cast<int>(shape[1]);
+  int num_preds = static_cast<int>(shape[2]);
+  const float *output_data = out.GetTensorData<float>();
 
   // NMS
-  auto keep = non_max_suppression(output)[0];
-  auto boxes = keep.index({Slice(), Slice(None, 4)});
-  keep.index_put_({Slice(), Slice(None, 4)}, scale_boxes({input_image.rows, input_image.cols},
-                                                         boxes, {image.rows, image.cols}));
+  auto raw_dets = non_max_suppression(output_data, num_preds, pred_dim, this->conf, this->iou);
+  scale_boxes({input_image.height, input_image.width}, raw_dets, {image.height, image.width});
 
   // Get detection results
   std::vector<Detection> results;
-  for (int i = 0; i < keep.size(0); i++) {
-    int x1 = keep[i][0].item().toFloat();
-    int y1 = keep[i][1].item().toFloat();
-    int x2 = keep[i][2].item().toFloat();
-    int y2 = keep[i][3].item().toFloat();
-    float conf = keep[i][4].item().toFloat();
-    int cls = keep[i][5].item().toInt();
-
-    // Clip bounding box to image boundaries to prevent OpenCV assertion failures
-    x1 = std::max(0, x1);
-    y1 = std::max(0, y1);
-    x2 = std::min(image.cols, x2);
-    y2 = std::min(image.rows, y2);
-
-    cv::Rect box(x1, y1, x2 - x1, y2 - y1);
-    cv::Scalar color(0, 255, 0);
-    Box xyxy_box(x1, y1, x2, y2);
+  for (auto &d : raw_dets) {
+    int x1 = std::max(0, (int)d.x1);
+    int y1 = std::max(0, (int)d.y1);
+    int x2 = std::min(image.width, (int)d.x2);
+    int y2 = std::min(image.height, (int)d.y2);
 
     // Ensure the box has positive area after clipping
-    if (box.width <= 0 || box.height <= 0) {
+    if (x2 - x1 <= 0 || y2 - y1 <= 0) {
       continue;
     }
 
-    cv::Mat crop_face = image(box);
-    Detection det(cls, std::string("face"), conf, box, xyxy_box, crop_face, color);
+    Box xyxy_box(x1, y1, x2, y2);
+    ImageRGB crop_face = image.crop(x1, y1, x2, y2);
+    Detection det(d.cls, std::string("face"), d.conf, xyxy_box, crop_face);
     results.push_back(det);
   }
 
@@ -79,12 +93,6 @@ std::vector<Detection> FaceDetection::inference(cv::Mat &image) {
   return results;
 }
 
-torch::Tensor FaceDetection::preprocess(cv::Mat &input_image) {
-  torch::Tensor image_tensor =
-      torch::from_blob(input_image.data, {input_image.rows, input_image.cols, 3}, torch::kByte)
-          .to(device);
-  image_tensor = image_tensor.toType(torch::kFloat32).div(255);
-  image_tensor = image_tensor.permute({2, 0, 1});
-  image_tensor = image_tensor.unsqueeze(0);
-  return image_tensor;
+std::vector<float> FaceDetection::preprocess(const ImageRGB &input_image) {
+  return image_to_chw(input_image);
 }

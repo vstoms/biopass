@@ -4,20 +4,83 @@
 
 set -euo pipefail
 
+BASE_URL="https://biopass.ticklab.site/models"
+
 MODELS=(
-    "https://biopass.ticklab.site/models/yolov11n-face.torchscript|yolov11n-face.torchscript"
-    "https://biopass.ticklab.site/models/edgeface_s_gamma_05_ts.pt|edgeface_s_gamma_05_ts.pt"
-    "https://biopass.ticklab.site/models/mobilenetv3_antispoof_ts.pt|mobilenetv3_antispoof_ts.pt"
+    "${BASE_URL}/yolov8n-face.onnx"
+    "${BASE_URL}/edgeface_s_gamma_05.onnx"
+    "${BASE_URL}/edgeface_xs_gamma_06.onnx"
+    "${BASE_URL}/mobilenetv3_antispoof.onnx"
+)
+
+LEGACY_MODELS=(
+    "yolov11n-face.torchscript"
+    "edgeface_s_gamma_05_ts.pt"
+    "mobilenetv3_antispoof_ts.pt"
 )
 
 # Determine the data dir. If running as root (e.g. system-wide install),
 # use SUDO_USER's home if available, otherwise fallback to /root.
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
     USER_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
-    DATA_DIR="${USER_HOME}/.local/share/com.ticklab.biopass/models"
+    APP_DATA_DIR="${USER_HOME}/.local/share/com.ticklab.biopass"
+    DATA_DIR="${APP_DATA_DIR}/models"
+    CONFIG_DIR="${USER_HOME}/.config/com.ticklab.biopass"
 else
-    DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/com.ticklab.biopass/models"
+    APP_DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/com.ticklab.biopass"
+    DATA_DIR="${APP_DATA_DIR}/models"
+    CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/com.ticklab.biopass"
 fi
+
+CONFIG_FILE="${CONFIG_DIR}/config.yaml"
+
+escape_sed_replacement() {
+    printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'
+}
+
+migrate_config_models() {
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "Biopass: No existing config found at $CONFIG_FILE, skipping config migration."
+        return
+    fi
+
+    echo "Biopass: Migrating model paths in $CONFIG_FILE"
+    local escaped_data_dir
+    escaped_data_dir="$(escape_sed_replacement "$DATA_DIR")"
+
+    # 1) Rename legacy model filenames to current ONNX filenames everywhere.
+    sed -i \
+        -e 's/yolov11n-face\.torchscript/yolov8n-face.onnx/g' \
+        -e 's/edgeface_s_gamma_05_ts\.pt/edgeface_s_gamma_05.onnx/g' \
+        -e 's/mobilenetv3_antispoof_ts\.pt/mobilenetv3_antispoof.onnx/g' \
+        "$CONFIG_FILE"
+
+    # 2) Force face model model/path entries to use the new files from ~/.local/share/.../models.
+    sed -E -i \
+        -e "s#^([[:space:]]*(model|path):[[:space:]]*)['\"]?[^'\"[:space:]]*yolov8n-face\\.onnx['\"]?[[:space:]]*\$#\\1${escaped_data_dir}/yolov8n-face.onnx#g" \
+        -e "s#^([[:space:]]*(model|path):[[:space:]]*)['\"]?[^'\"[:space:]]*edgeface_s_gamma_05\\.onnx['\"]?[[:space:]]*\$#\\1${escaped_data_dir}/edgeface_s_gamma_05.onnx#g" \
+        -e "s#^([[:space:]]*(model|path):[[:space:]]*)['\"]?[^'\"[:space:]]*mobilenetv3_antispoof\\.onnx['\"]?[[:space:]]*\$#\\1${escaped_data_dir}/mobilenetv3_antispoof.onnx#g" \
+        "$CONFIG_FILE"
+}
+
+remove_legacy_models() {
+    local removed=0
+    for filename in "${LEGACY_MODELS[@]}"; do
+        local old_model_path="${DATA_DIR}/${filename}"
+        if [ -f "$old_model_path" ]; then
+            echo "Biopass: Removing legacy model $filename"
+            rm -f "$old_model_path"
+            removed=1
+        fi
+    done
+
+    if [ "$removed" -eq 0 ]; then
+        echo "Biopass: No legacy models to remove."
+    fi
+}
+
+migrate_config_models
+remove_legacy_models
 
 echo "Biopass: Ensuring model directory exists at $DATA_DIR"
 mkdir -p "$DATA_DIR"
@@ -44,5 +107,8 @@ echo "Biopass: Model download complete."
 
 # Fix ownership back to the actual user if running under sudo
 if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ]; then
-    chown -R "$SUDO_USER:$SUDO_USER" "${USER_HOME}/.local/share/com.ticklab.biopass"
+    chown -R "$SUDO_USER:$SUDO_USER" "$APP_DATA_DIR"
+    if [ -d "$CONFIG_DIR" ]; then
+        chown -R "$SUDO_USER:$SUDO_USER" "$CONFIG_DIR"
+    fi
 fi

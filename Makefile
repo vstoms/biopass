@@ -6,7 +6,7 @@
 #    app/   → Tauri desktop application
 #
 #  Prerequisites
-#    auth : cmake, ninja/make, libopencv-dev, libpam0g-dev, libcli11-dev
+#    auth : cmake, ninja/make, libpam0g-dev, libcli11-dev
 #    app  : bun, rustup/cargo, tauri-cli v2, webkit2gtk, libssl-dev …
 # ---------------------------------------------------------------------------
 
@@ -32,7 +32,10 @@ package: package-app
 build-auth:
 	@echo "==> [auth] Configuring CMake (BUILD_TYPE=$(BUILD_TYPE))…"
 	cmake -S auth -B $(AUTH_BUILD) \
+	      -Wno-deprecated \
 	      -DCMAKE_BUILD_TYPE=$(BUILD_TYPE) \
+	      -DCMAKE_WARN_DEPRECATED=OFF \
+	      -DCMAKE_ERROR_DEPRECATED=OFF \
 	      -DPROJECT_VERSION=$(VERSION)
 	@echo "==> [auth] Building…"
 	cmake --build $(AUTH_BUILD) --config $(BUILD_TYPE) --parallel

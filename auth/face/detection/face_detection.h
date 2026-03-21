@@ -7,13 +7,11 @@
 #include <string>
 #include <vector>
 
-// OpenCV
-#include <opencv2/imgproc.hpp>
-#include <opencv2/opencv.hpp>
+// Image utilities (replaces OpenCV)
+#include "image_utils.h"
 
-// Libtorch
-#include <torch/script.h>
-#include <torch/torch.h>
+// ONNX Runtime
+#include <onnxruntime_cxx_api.h>
 
 struct Box {
   int x1, y1, x2, y2;
@@ -22,51 +20,46 @@ struct Box {
 
 struct Detection {
   int class_id{-1};
-  cv::Rect box;
-  Box xyxy_box;
-  cv::Mat image;
+  Box box;
+  ImageRGB image;
   float conf{0.0};
-  cv::Scalar color;
   std::string class_name;
 
-  Detection(int class_id, std::string class_name, float conf, cv::Rect box, Box xyxy_box,
-            const cv::Mat& image, cv::Scalar color)
-      : class_id(class_id),
-        class_name(class_name),
-        conf(conf),
-        box(box),
-        xyxy_box(xyxy_box),
-        color(color),
-        image(image) {}
+  Detection(int class_id, std::string class_name, float conf, Box box, const ImageRGB& image)
+      : class_id(class_id), class_name(class_name), conf(conf), box(box), image(image) {}
 
-  bool operator>(const Detection& obj) const {
-    return (box.width * box.height) > (obj.box.width * obj.box.height);
-  }
+  int area() const { return (box.x2 - box.x1) * (box.y2 - box.y1); }
 
-  bool operator<(const Detection& obj) const {
-    return (box.width * box.height) < (obj.box.width * obj.box.height);
-  }
+  bool operator>(const Detection& obj) const { return area() > obj.area(); }
+
+  bool operator<(const Detection& obj) const { return area() < obj.area(); }
 };
 
 class FaceDetection {
  public:
-  FaceDetection(const std::string& ckpt, const cv::Size& imgsz = {640, 640},
+  FaceDetection(const std::string& ckpt, int imgsz = 640,
                 const std::vector<std::string>& classes = {"face"}, const bool& cuda = false,
                 const float conf = 0.50, const float iou = 0.50);
 
   void load_model(const std::string& ckpt);
-  std::vector<Detection> inference(cv::Mat& image);
-  torch::Tensor preprocess(cv::Mat& image);
+  std::vector<Detection> inference(const ImageRGB& image);
+  std::vector<float> preprocess(const ImageRGB& image);
 
  private:
   bool cuda;
   float conf;
   float iou;
-  cv::Size imgsz;
+  int imgsz;
   std::string ckpt{};
-  torch::jit::script::Module model;
   std::vector<std::string> classes{"face"};
-  torch::Device device = torch::Device(torch::kCPU);
+
+  Ort::Env env{ORT_LOGGING_LEVEL_WARNING, "FaceDetection"};
+  std::unique_ptr<Ort::Session> session;
+  Ort::AllocatorWithDefaultOptions allocator;
+  std::vector<std::string> input_names_str;
+  std::vector<std::string> output_names_str;
+  std::vector<const char*> input_names_cstr;
+  std::vector<const char*> output_names_cstr;
 };
 
 #endif  // FACE_DET_H

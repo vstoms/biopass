@@ -1,12 +1,12 @@
 #include "auth_config.h"
 
 #include <pwd.h>
+#include <spdlog/spdlog.h>
 #include <unistd.h>
 #include <yaml-cpp/yaml.h>
 
 #include <algorithm>
 #include <fstream>
-#include <iostream>
 
 namespace biopass {
 
@@ -149,10 +149,9 @@ BiopassConfig load_config(const std::string &username) {
       config.methods = enabled;
     }
   } catch (const YAML::BadFile &e) {
-    std::cerr << "Biopass: Config file not found at " << config_path << ", using defaults"
-              << std::endl;
+    spdlog::warn("Biopass: Config file not found at {}, using defaults", config_path);
   } catch (const YAML::Exception &e) {
-    std::cerr << "Biopass: Failed to parse config: " << e.what() << ", using defaults" << std::endl;
+    spdlog::error("Biopass: Failed to parse config: {}, using defaults", e.what());
   }
 
   return config;
@@ -200,8 +199,14 @@ std::vector<std::string> list_user_faces(const std::string &username) {
     std::string name(entry->d_name);
     if (name.size() > 4) {
       std::string ext = name.substr(name.size() - 4);
-      if (ext == ".jpg" || ext == ".JPG" || ext == ".png" || ext == ".PNG") {
+      if (ext == ".jpg" || ext == ".JPG" || ext == ".png" || ext == ".PNG" || ext == ".bmp" ||
+          ext == ".BMP" || ext == ".tga" || ext == ".TGA") {
         faces.push_back(dir + "/" + name);
+      } else if (name.size() > 5) {
+        std::string ext5 = name.substr(name.size() - 5);
+        if (ext5 == ".jpeg" || ext5 == ".JPEG") {
+          faces.push_back(dir + "/" + name);
+        }
       }
     }
   }

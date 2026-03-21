@@ -2,31 +2,45 @@
 # Dependency Management
 # ==============================================================================
 
-# Fetch libtorch
+# ONNX Runtime
+set(ONNXRUNTIME_VERSION "1.19.2")
 include(FetchContent)
-FetchContent_Declare(
-    libtorch
-    URL https://download.pytorch.org/libtorch/nightly/cpu/libtorch-cxx11-abi-shared-without-deps-2.2.0.dev20231031%2Bcpu.zip
-)
-# CMake 3.28+ deprecation warning workaround: Since libtorch is precompiled, we must populate it manually.
-FetchContent_GetProperties(libtorch)
-if(NOT libtorch_POPULATED)
-    FetchContent_Populate(libtorch)
+
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(ONNXRUNTIME_ARCH "linux-aarch64")
+else()
+    set(ONNXRUNTIME_ARCH "linux-x64")
 endif()
 
-# Find dependencies
-set(CMAKE_PREFIX_PATH "${libtorch_SOURCE_DIR}")
-set(Torch_DIR ${libtorch_SOURCE_DIR}/share/cmake/Torch)
+FetchContent_Declare(
+    onnxruntime
+    URL https://github.com/microsoft/onnxruntime/releases/download/v${ONNXRUNTIME_VERSION}/onnxruntime-${ONNXRUNTIME_ARCH}-${ONNXRUNTIME_VERSION}.tgz
+    DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+)
+FetchContent_MakeAvailable(onnxruntime)
 
-# Hack to silence shadowing warnings by telling CMake this is an "implicit" directory
-list(APPEND CMAKE_PLATFORM_IMPLICIT_LINK_DIRECTORIES "${libtorch_SOURCE_DIR}/lib")
+set(ONNXRUNTIME_ROOT "${onnxruntime_SOURCE_DIR}")
+set(ONNXRUNTIME_INCLUDE_DIRS "${ONNXRUNTIME_ROOT}/include")
+set(ONNXRUNTIME_LIB_DIR "${ONNXRUNTIME_ROOT}/lib")
+find_library(ONNXRUNTIME_LIB onnxruntime PATHS ${ONNXRUNTIME_LIB_DIR} NO_DEFAULT_PATH)
 
-find_package(Torch REQUIRED NO_DEFAULT_PATH)
+# openpnp-capture (replaces OpenCV for camera capture)
+set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
+FetchContent_Declare(
+    openpnp-capture
+    GIT_REPOSITORY https://github.com/openpnp/openpnp-capture.git
+    GIT_TAG        v0.0.30
+)
+FetchContent_MakeAvailable(openpnp-capture)
+unset(CMAKE_POLICY_VERSION_MINIMUM CACHE)
 
-# Ensure we use full paths to libraries to avoid shadowing warnings
-cmake_policy(SET CMP0060 NEW)
-
-find_package(OpenCV REQUIRED)
+FetchContent_Declare(
+    stb
+    GIT_REPOSITORY https://github.com/nothings/stb.git
+    GIT_TAG        904aa67e1e2d1dec92959df63e700b166d5c1022
+)
+FetchContent_MakeAvailable(stb)
+set(STB_INCLUDE_DIRS "${stb_SOURCE_DIR}")
 
 # yaml-cpp for config parsing
 find_package(yaml-cpp REQUIRED)

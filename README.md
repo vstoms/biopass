@@ -41,10 +41,16 @@ Biopass was developed by [@phucvinh57](https://github.com/phucvinh57) and [@thai
 
 Please visit the [release page](https://github.com/TickLabVN/biopass/releases) to download the newest `.deb` or `.rpm` package.
 
+Manual PAM setup (all Linux distributions): [docs/PAM.md](docs/PAM.md)
+
 ## Features
 
 - [x] Authentication: User can register multiple biometrics for authentication. Authentication methods can be executed in parallel or sequentially.
-    - [x] Face: recognition + anti-spoofing
+    - [x] Face:
+      - [x] Recognition
+      - [ ] Anti-spoofing
+        - [x] By AI model
+        - [ ] By IR camera
     - [x] Fingerprint
     - [ ] Voice: recognition + anti-spoofing
 - [ ] Local AI model management: User can download, update, and delete AI models for face and voice authentication methods.
