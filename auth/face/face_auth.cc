@@ -21,7 +21,7 @@
 namespace biopass {
 
 namespace {
-void capture_log_callback(uint32_t level, const char *message) {
+void capture_log_callback(uint32_t level, const char* message) {
   if (!message)
     return;
   if (std::strstr(message, "tjDecompressHeader2 failed: No error") != nullptr) {
@@ -56,8 +56,8 @@ std::string get_timestamp_string() {
   return std::to_string(ms);
 }
 
-void save_failed_face(const std::string &username, const ImageRGB &face,
-                      const std::string &reason) {
+void save_failed_face(const std::string& username, const ImageRGB& face,
+                      const std::string& reason) {
   biopass::setup_config(username);
   std::string failedFacePath =
       biopass::debug_path(username) + "/" + reason + "." + get_timestamp_string() + ".jpg";
@@ -71,9 +71,19 @@ bool FaceAuth::is_available() const {
   CapContext ctx = Cap_createContext();
   if (!ctx)
     return false;
+
   uint32_t count = Cap_getDeviceCount(ctx);
+  if (count == 0) {
+    Cap_releaseContext(ctx);
+    return false;
+  }
+
+  CapStream stream = Cap_openStream(ctx, 0, 0);
+  bool available = stream >= 0 && Cap_isOpenStream(ctx, stream);
+  if (available)
+    Cap_closeStream(ctx, stream);
   Cap_releaseContext(ctx);
-  return count > 0;
+  return available;
 }
 
 static ImageRGB capture_frame_from_camera() {
@@ -126,8 +136,8 @@ static ImageRGB capture_frame_from_camera() {
   return result;
 }
 
-AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig &config,
-                                  std::atomic<bool> *cancel_signal) {
+AuthResult FaceAuth::authenticate(const std::string& username, const AuthConfig& config,
+                                  std::atomic<bool>* cancel_signal) {
   if (!this->is_available()) {
     spdlog::error("FaceAuth: Could not open camera");
     return AuthResult::Unavailable;
@@ -149,7 +159,7 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
   std::unique_ptr<FaceDetection> faceDetector;
   try {
     faceDetector = std::make_unique<FaceDetection>(detectModelPath);
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::string msg = e.what();
     size_t first_line = msg.find('\n');
     if (first_line != std::string::npos)
@@ -159,7 +169,7 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
   }
   try {
     faceReg = std::make_unique<FaceRecognition>(recogModelPath);
-  } catch (const std::exception &e) {
+  } catch (const std::exception& e) {
     std::string msg = e.what();
     size_t first_line = msg.find('\n');
     if (first_line != std::string::npos)
@@ -198,13 +208,13 @@ AuthResult FaceAuth::authenticate(const std::string &username, const AuthConfig 
         }
         return AuthResult::Retry;
       }
-    } catch (const std::exception &e) {
+    } catch (const std::exception& e) {
       spdlog::error("FaceAuth: Anti-spoofing model failed: {}, skipping check", e.what());
     }
   }
 
   // Match against all enrolled faces — succeed if any match
-  for (const auto &facePath : enrolledFaces) {
+  for (const auto& facePath : enrolledFaces) {
     ImageRGB preparedFace = image_load(facePath);
     if (preparedFace.empty())
       continue;
