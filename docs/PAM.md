@@ -48,7 +48,7 @@ Typical include files by distro family:
 If unsure, inspect target service files first (`sudo`, `login`, `sshd`, display manager):
 
 ```bash
-grep -R "^\s*auth" /etc/pam.d/{sudo,login,sshd,gdm-password,sddm,lightdm} 2>/dev/null
+grep -R "@include" /etc/pam.d/{sudo,login,sshd,gdm-password,sddm,lightdm} 2>/dev/null
 ```
 
 Find which include file they reference, then edit that include file.
@@ -72,8 +72,6 @@ auth    [success=1 default=ignore]      pam_unix.so nullok
 # fallback if no previous auth module succeeded
 auth    requisite                       pam_deny.so
 ```
-
-
 
 ### What `[success=2 default=ignore]` means
 
