@@ -46,9 +46,7 @@
           "/usr/lib/biopass/libbiopass_det.so": "../../auth/build/face/detection/libbiopass_det.so",
           "/usr/lib/biopass/libbiopass_reg.so": "../../auth/build/face/recognition/libbiopass_reg.so",
           "/usr/lib/biopass/libbiopass_as.so": "../../auth/build/face/antispoofing/libbiopass_as.so",
-          "/usr/lib/biopass/libonnxruntime.so.1.19.2": "../../auth/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.19.2",
           "/usr/lib/biopass/libonnxruntime.so.1": "../../auth/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.19.2",
-          "/usr/lib/biopass/libopenpnp-capture.so.0.0.28": "../../auth/build/_deps/openpnp-capture-build/libopenpnp-capture.so.0.0.28",
           "/usr/lib/biopass/libopenpnp-capture.so.0": "../../auth/build/_deps/openpnp-capture-build/libopenpnp-capture.so.0.0.28",
           "/etc/ld.so.conf.d/biopass.conf": "scripts/biopass-ldconf"
         }
@@ -65,9 +63,7 @@
           "/usr/lib/biopass/libbiopass_det.so": "../../auth/build/face/detection/libbiopass_det.so",
           "/usr/lib/biopass/libbiopass_reg.so": "../../auth/build/face/recognition/libbiopass_reg.so",
           "/usr/lib/biopass/libbiopass_as.so": "../../auth/build/face/antispoofing/libbiopass_as.so",
-          "/usr/lib/biopass/libonnxruntime.so.1.19.2": "../../auth/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.19.2",
           "/usr/lib/biopass/libonnxruntime.so.1": "../../auth/build/_deps/onnxruntime-src/lib/libonnxruntime.so.1.19.2",
-          "/usr/lib/biopass/libopenpnp-capture.so.0.0.28": "../../auth/build/_deps/openpnp-capture-build/libopenpnp-capture.so.0.0.28",
           "/usr/lib/biopass/libopenpnp-capture.so.0": "../../auth/build/_deps/openpnp-capture-build/libopenpnp-capture.so.0.0.28",
           "/etc/ld.so.conf.d/biopass.conf": "scripts/biopass-ldconf"
         }
