@@ -86,8 +86,8 @@ echo "Biopass: Ensuring model directory exists at $DATA_DIR"
 mkdir -p "$DATA_DIR"
 
 for entry in "${MODELS[@]}"; do
-    url="${entry%%|*}"
-    filename="${entry##*|}"
+    url="$entry"
+    filename="$(basename "$url")"
     dest="$DATA_DIR/$filename"
 
     if [ -f "$dest" ]; then
