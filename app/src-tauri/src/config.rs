@@ -19,8 +19,6 @@ pub struct StrategyConfig {
     pub debug: bool,
     pub execution_mode: String,
     pub order: Vec<String>,
-    #[serde(default)]
-    pub pam_enabled: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -73,8 +71,9 @@ pub struct FingerprintMethodConfig {
     pub enable: bool,
     #[serde(default = "default_fingerprint_retries")]
     pub retries: u32,
-    #[serde(default = "default_fingerprint_delay")]
-    pub retry_delay: u32,
+    // TODO: rename the actual field in config from "retry_delay" to "timeout" for clarity
+    #[serde(default = "default_fingerprint_timeout", alias = "retry_delay")]
+    pub timeout: u32,
     #[serde(default)]
     pub fingers: Vec<FingerConfig>,
 }
@@ -112,7 +111,7 @@ fn default_face_delay() -> u32 {
 fn default_fingerprint_retries() -> u32 {
     1
 }
-fn default_fingerprint_delay() -> u32 {
+fn default_fingerprint_timeout() -> u32 {
     5000
 }
 fn default_voice_retries() -> u32 {
@@ -132,13 +131,12 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
     BiopassConfig {
         strategy: StrategyConfig {
             debug: false,
-            execution_mode: "sequential".to_string(),
+            execution_mode: "parallel".to_string(),
             order: vec![
                 "face".to_string(),
                 "fingerprint".to_string(),
                 "voice".to_string(),
             ],
-            pam_enabled: false,
         },
         methods: MethodsConfig {
             face: FaceMethodConfig {
@@ -166,7 +164,7 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
             fingerprint: FingerprintMethodConfig {
                 enable: false,
                 retries: 1,
-                retry_delay: 5000,
+                timeout: 5000,
                 fingers: vec![],
             },
             voice: VoiceMethodConfig {

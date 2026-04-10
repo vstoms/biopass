@@ -16,11 +16,13 @@ const char* FPRINT_MANAGER_INTERFACE = "net.reactivated.Fprint.Manager";
 const char* FPRINT_DEVICE_INTERFACE = "net.reactivated.Fprint.Device";
 
 struct AuthContext {
-  GMainLoop* loop;
-  AuthResult result;
+  GMainLoop* loop = nullptr;
+  AuthResult result = AuthResult::Failure;
   std::string error_msg;
-  bool debug;
-  std::atomic<bool>* cancel_signal;
+  bool debug = false;
+  std::atomic<bool>* cancel_signal = nullptr;
+  int verify_timeout_ms = 0;
+  bool verify_timeout_fired = false;
 };
 
 void on_verify_status(GDBusConnection* connection, const gchar* sender_name,
@@ -69,6 +71,21 @@ gboolean on_cancel_timeout(gpointer user_data) {
   return G_SOURCE_CONTINUE;
 }
 
+gboolean on_verify_timeout(gpointer user_data) {
+  AuthContext* ctx = static_cast<AuthContext*>(user_data);
+  ctx->verify_timeout_fired = true;
+  ctx->result = AuthResult::Retry;
+
+  if (ctx->verify_timeout_ms > 0) {
+    spdlog::debug("FingerprintAuth: Verification timed out after {} ms", ctx->verify_timeout_ms);
+  } else {
+    spdlog::debug("FingerprintAuth: Verification timed out");
+  }
+
+  g_main_loop_quit(ctx->loop);
+  return G_SOURCE_REMOVE;
+}
+
 }  // namespace
 
 bool FingerprintAuth::is_available() const {
@@ -107,6 +124,70 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                                          std::atomic<bool>* cancel_signal) {
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
+  GDBusProxy* manager = nullptr;
+  GDBusProxy* device = nullptr;
+  bool device_claimed = false;
+  bool verification_started = false;
+  guint verify_status_subscription_id = 0;
+  guint cancel_poll_source_id = 0;
+  guint verify_timeout_source_id = 0;
+  AuthContext ctx;
+
+  auto cleanup = [&]() {
+    if (cancel_poll_source_id != 0) {
+      g_source_remove(cancel_poll_source_id);
+      cancel_poll_source_id = 0;
+    }
+
+    if (verify_timeout_source_id != 0 && !ctx.verify_timeout_fired) {
+      g_source_remove(verify_timeout_source_id);
+      verify_timeout_source_id = 0;
+    }
+
+    if (verify_status_subscription_id != 0 && connection) {
+      g_dbus_connection_signal_unsubscribe(connection, verify_status_subscription_id);
+      verify_status_subscription_id = 0;
+    }
+
+    if (ctx.loop != nullptr) {
+      g_main_loop_unref(ctx.loop);
+      ctx.loop = nullptr;
+    }
+
+    if (verification_started && device) {
+      GVariant* stop_ret =
+          g_dbus_proxy_call_sync(device, "VerifyStop", nullptr, G_DBUS_CALL_FLAGS_NONE, -1,
+                                 nullptr, nullptr);
+      if (stop_ret)
+        g_variant_unref(stop_ret);
+      verification_started = false;
+    }
+
+    if (device_claimed && device) {
+      GVariant* release_ret =
+          g_dbus_proxy_call_sync(device, "Release", nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr,
+                                 nullptr);
+      if (release_ret)
+        g_variant_unref(release_ret);
+      device_claimed = false;
+    }
+
+    if (device) {
+      g_object_unref(device);
+      device = nullptr;
+    }
+
+    if (manager) {
+      g_object_unref(manager);
+      manager = nullptr;
+    }
+
+    if (connection) {
+      g_object_unref(connection);
+      connection = nullptr;
+    }
+  };
+
   if (!connection) {
     spdlog::error("FingerprintAuth: Failed to get system bus: {}", error->message);
     g_error_free(error);
@@ -114,14 +195,13 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   }
 
   // 1. Get Manager
-  GDBusProxy* manager =
-      g_dbus_proxy_new_sync(connection, G_DBUS_PROXY_FLAGS_NONE, nullptr, FPRINT_SERVICE,
-                            FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
+  manager = g_dbus_proxy_new_sync(connection, G_DBUS_PROXY_FLAGS_NONE, nullptr, FPRINT_SERVICE,
+                                  FPRINT_MANAGER_PATH, FPRINT_MANAGER_INTERFACE, nullptr, &error);
 
-  if (error) {
+  if (!manager) {
     spdlog::error("FingerprintAuth: Failed to get manager proxy: {}", error->message);
     g_error_free(error);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;
   }
 
@@ -133,8 +213,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                   (error ? error->message : "Unknown"));
     if (error)
       g_error_free(error);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;
   }
 
@@ -144,15 +223,13 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   g_variant_unref(dev_ret);
 
   // 3. Get Device Proxy
-  GDBusProxy* device =
-      g_dbus_proxy_new_sync(connection, G_DBUS_PROXY_FLAGS_NONE, nullptr, FPRINT_SERVICE,
-                            dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
+  device = g_dbus_proxy_new_sync(connection, G_DBUS_PROXY_FLAGS_NONE, nullptr, FPRINT_SERVICE,
+                                 dev_path_str.c_str(), FPRINT_DEVICE_INTERFACE, nullptr, &error);
 
-  if (error) {
+  if (!device) {
     spdlog::error("FingerprintAuth: Failed to get device proxy: {}", error->message);
     g_error_free(error);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;
   }
 
@@ -168,9 +245,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
         (error ? error->message : ""));
     if (error)
       g_error_free(error);
-    g_object_unref(device);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;  // Or Failure
   }
 
@@ -186,9 +261,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
 
   if (!has_fingers) {
     spdlog::error("FingerprintAuth: User {} has no enrolled fingerprints.", username);
-    g_object_unref(device);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;  // Should we return Failure? Unavailable seems appropriate if
                                      // not set up.
   }
@@ -202,12 +275,11 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
     spdlog::error("FingerprintAuth: Failed to claim device: {}", (error ? error->message : ""));
     if (error)
       g_error_free(error);
-    g_object_unref(device);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Unavailable;
   }
   g_variant_unref(claim_ret);
+  device_claimed = true;
 
   // 6. Start Verification
   // "any" is typically used to accept any enrolled finger
@@ -219,55 +291,35 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
                   (error ? error->message : ""));
     if (error)
       g_error_free(error);
-    // Release
-    GVariant* rel_ret = g_dbus_proxy_call_sync(device, "Release", nullptr, G_DBUS_CALL_FLAGS_NONE,
-                                               -1, nullptr, nullptr);
-    if (rel_ret)
-      g_variant_unref(rel_ret);
-    g_object_unref(device);
-    g_object_unref(manager);
-    g_object_unref(connection);
+    cleanup();
     return AuthResult::Failure;
   }
   g_variant_unref(verify_ret);
+  verification_started = true;
 
   // 7. Loop Loop
-  AuthContext ctx;
   ctx.loop = g_main_loop_new(nullptr, FALSE);
-  ctx.result = AuthResult::Failure;  // Default
   ctx.debug = config.debug;
   ctx.cancel_signal = cancel_signal;
+  ctx.verify_timeout_ms = config_.timeout_ms;
 
-  guint sub_id = g_dbus_connection_signal_subscribe(
+  verify_status_subscription_id = g_dbus_connection_signal_subscribe(
       connection, FPRINT_SERVICE, FPRINT_DEVICE_INTERFACE, "VerifyStatus", dev_path_str.c_str(),
       nullptr, G_DBUS_SIGNAL_FLAGS_NONE, on_verify_status, &ctx, nullptr);
 
   // Poll cancel token every 50ms (prevent hanging forever)
-  guint timeout_id = g_timeout_add(50, on_cancel_timeout, &ctx);
+  cancel_poll_source_id = g_timeout_add(50, on_cancel_timeout, &ctx);
 
-  spdlog::debug("Waiting for fingerprint...");
+  if (config_.timeout_ms > 0) {
+    verify_timeout_source_id = g_timeout_add(config_.timeout_ms, on_verify_timeout, &ctx);
+    spdlog::debug("Waiting for fingerprint (timeout {} ms)...", config_.timeout_ms);
+  } else {
+    spdlog::debug("Waiting for fingerprint...");
+  }
+
   g_main_loop_run(ctx.loop);
 
-  g_source_remove(timeout_id);
-  g_dbus_connection_signal_unsubscribe(connection, sub_id);
-  g_main_loop_unref(ctx.loop);
-
-  // Stop Verification
-  GVariant* stop_ret = g_dbus_proxy_call_sync(device, "VerifyStop", nullptr, G_DBUS_CALL_FLAGS_NONE,
-                                              -1, nullptr, nullptr);
-  if (stop_ret)
-    g_variant_unref(stop_ret);
-
-  // Release
-  GVariant* release_ret = g_dbus_proxy_call_sync(device, "Release", nullptr, G_DBUS_CALL_FLAGS_NONE,
-                                                 -1, nullptr, nullptr);
-  if (release_ret)
-    g_variant_unref(release_ret);
-
-  g_object_unref(device);
-  g_object_unref(manager);
-  g_object_unref(connection);
-
+  cleanup();
   return ctx.result;
 }
 

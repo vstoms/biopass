@@ -87,7 +87,7 @@ export function MethodsSection({ methods, models, onChange }: Props) {
           }
         >
           <div className="grid gap-4">
-            {/* Retries and Delay */}
+            {/* Retries and Timeout */}
             <div className="grid grid-cols-2 gap-6 p-4 rounded-lg bg-muted/50 border border-border/50">
               <div className="grid gap-2">
                 <Label
@@ -370,22 +370,22 @@ export function MethodsSection({ methods, models, onChange }: Props) {
               </div>
               <div className="grid gap-2">
                 <Label
-                  htmlFor="fingerprint-retry-delay"
+                  htmlFor="fingerprint-timeout"
                   className="text-sm font-medium text-muted-foreground"
                 >
-                  Retry Delay (ms)
+                  Timeout (ms)
                 </Label>
                 <Input
-                  id="fingerprint-retry-delay"
+                  id="fingerprint-timeout"
                   type="number"
                   min="0"
                   max="5000"
                   step="100"
-                  value={methods.fingerprint.retry_delay}
+                  value={methods.fingerprint.timeout}
                   onChange={(e) =>
                     updateFingerprint({
                       ...methods.fingerprint,
-                      retry_delay: parseInt(e.target.value, 10) || 0,
+                      timeout: parseInt(e.target.value, 10) || 0,
                     })
                   }
                   className="h-10"

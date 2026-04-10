@@ -66,7 +66,7 @@ class AuthManager {
   int run_parallel(const std::string &username);
 
   std::vector<std::unique_ptr<IAuthMethod>> methods_;
-  ExecutionMode mode_ = ExecutionMode::Sequential;
+  ExecutionMode mode_ = ExecutionMode::Parallel;
   AuthConfig config_;
 };
 
