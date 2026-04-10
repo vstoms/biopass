@@ -21,7 +21,8 @@ class FingerprintAuth : public IAuthMethod {
   std::string name() const override { return "Fingerprint"; }
   bool is_available() const override;
   int get_retries() const override { return config_.retries; }
-  int get_retry_delay_ms() const override { return config_.retry_delay_ms; }
+  // Fingerprint uses timeout_ms as the per-attempt scan window.
+  int get_retry_delay_ms() const override { return 0; }
   AuthResult authenticate(const std::string &username, const AuthConfig &config,
                           std::atomic<bool> *cancel_signal = nullptr) override;
   std::vector<std::string> list_enrolled_fingers(const std::string &username);

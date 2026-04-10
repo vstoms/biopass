@@ -39,9 +39,9 @@ std::string user_data_dir(const std::string &username) {
 }
 
 static ExecutionMode parse_mode(const std::string &mode_str) {
-  if (mode_str == "parallel")
-    return ExecutionMode::Parallel;
-  return ExecutionMode::Sequential;
+  if (mode_str == "sequential")
+    return ExecutionMode::Sequential;
+  return ExecutionMode::Parallel;
 }
 
 BiopassConfig load_config(const std::string &username) {
@@ -132,8 +132,10 @@ BiopassConfig load_config(const std::string &username) {
           config.methods_config.fingerprint.enable = fp["enable"].as<bool>();
         if (fp["retries"])
           config.methods_config.fingerprint.retries = fp["retries"].as<int>();
-        if (fp["retry_delay"])
-          config.methods_config.fingerprint.retry_delay_ms = fp["retry_delay"].as<int>();
+        if (fp["timeout"])
+          config.methods_config.fingerprint.timeout_ms = fp["timeout"].as<int>();
+        else if (fp["retry_delay"])
+          config.methods_config.fingerprint.timeout_ms = fp["retry_delay"].as<int>();
       }
 
       // Filter method list to only enabled methods

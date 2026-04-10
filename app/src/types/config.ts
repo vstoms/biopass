@@ -9,7 +9,6 @@ export interface StrategyConfig {
   debug: boolean;
   execution_mode: "sequential" | "parallel";
   order: string[];
-  pam_enabled: boolean;
 }
 
 export interface MethodsConfig {
@@ -44,7 +43,7 @@ export interface FaceMethodConfig {
 export interface FingerprintMethodConfig {
   enable: boolean;
   retries: number;
-  retry_delay: number;
+  timeout: number;
   fingers: FingerConfig[];
 }
 

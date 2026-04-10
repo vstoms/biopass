@@ -53,7 +53,7 @@ struct VoiceMethodConfig {
 struct FingerprintMethodConfig {
   bool enable = false;
   int retries = 3;
-  int retry_delay_ms = 1000;
+  int timeout_ms = 1000;
 };
 
 struct MethodsConfig {
@@ -72,7 +72,7 @@ struct MethodsConfig {
  */
 struct BiopassConfig {
   bool debug = false;
-  ExecutionMode mode = ExecutionMode::Sequential;
+  ExecutionMode mode = ExecutionMode::Parallel;
   std::vector<std::string> methods = {"face"};
   AuthConfig auth = {};
   MethodsConfig methods_config = {};
