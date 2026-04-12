@@ -13,7 +13,6 @@
 #include "image_utils.h"
 #include "voice_auth.h"
 
-// Included from auth/face/detection
 #include "detection/face_detection.h"
 
 int handle_crop_face(const std::string& inputPath, const std::string& outputPath,
@@ -102,16 +101,17 @@ int handle_authenticate(const std::string& username) {
 
 int main(int argc, char** argv) {
   CLI::App app{"Biopass Helper Tool"};
-  app.require_subcommand(0, 1);
-
-  std::string username;
-  app.add_option("username", username, "Username for authentication");
+  app.require_subcommand(1, 1);
 
   auto crop_cmd = app.add_subcommand("crop-face", "Crop a face from an image");
   std::string inputPath, outputPath, modelPath;
   crop_cmd->add_option("--input,-i", inputPath, "Input image path")->required();
   crop_cmd->add_option("--output,-o", outputPath, "Output image path")->required();
   crop_cmd->add_option("--model,-m", modelPath, "Detection model path")->required();
+
+  std::string username;
+  auto auth_cmd = app.add_subcommand("auth", "Authenticate a user with Biopass");
+  auth_cmd->add_option("--username,-u", username, "Username for authentication")->required();
 
   try {
     app.parse(argc, argv);
@@ -123,10 +123,14 @@ int main(int argc, char** argv) {
     return handle_crop_face(inputPath, outputPath, modelPath);
   }
 
-  if (username.empty()) {
-    spdlog::info("{}", app.help());
-    return 2;  // PAM_IGNORE logic / error
+  if (app.got_subcommand(auth_cmd)) {
+    if (username.empty()) {
+      spdlog::info("{}", app.help());
+      return 2;  // PAM_IGNORE logic / error
+    }
+    return handle_authenticate(username);
   }
 
-  return handle_authenticate(username);
+  spdlog::error("No valid subcommand provided");
+  return 1;
 }

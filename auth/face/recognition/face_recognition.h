@@ -23,8 +23,7 @@ struct MatchResult {
 
 class FaceRecognition {
  public:
-  FaceRecognition(const std::string& ckpt, int imgsz = 112, const bool& cuda = false,
-                  const float threshold = 0.50);
+  FaceRecognition(const std::string& ckpt, int imgsz = 112, const float threshold = 0.50);
 
   void load_model(const std::string& ckpt);
   std::vector<float> inference(const ImageRGB& image);
@@ -35,7 +34,6 @@ class FaceRecognition {
 
  private:
   std::string ckpt;
-  bool cuda;
   float threshold;
   int imgsz;
 

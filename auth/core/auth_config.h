@@ -77,32 +77,11 @@ struct BiopassConfig {
   AuthConfig auth = {};
   MethodsConfig methods_config = {};
 };
-
-// ---------------------------------------------------------------------------
-// Config loading
-// ---------------------------------------------------------------------------
-
 BiopassConfig load_config(const std::string &username);
-std::string get_config_path(const std::string &username);
 bool config_exists(const std::string &username);
 
-// ---------------------------------------------------------------------------
-// Path helpers
-// ---------------------------------------------------------------------------
-
-// Returns the base data directory for a user.
-std::string user_data_dir(const std::string &username);
-
-// Returns the path to the faces directory for a user.
-std::string user_faces_dir(const std::string &username);
-
-// Returns all enrolled face image paths for a user (jpg/png).
-std::vector<std::string> list_user_faces(const std::string &username);
-
-// Returns the path to the debug directory for a user.
+std::vector<std::string> list_faces(const std::string &username);
 std::string debug_path(const std::string &username);
-
-// Creates required data directories for a user.
 int setup_config(const std::string &username);
 
 }  // namespace biopass

@@ -155,18 +155,16 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
     }
 
     if (verification_started && device) {
-      GVariant* stop_ret =
-          g_dbus_proxy_call_sync(device, "VerifyStop", nullptr, G_DBUS_CALL_FLAGS_NONE, -1,
-                                 nullptr, nullptr);
+      GVariant* stop_ret = g_dbus_proxy_call_sync(device, "VerifyStop", nullptr,
+                                                  G_DBUS_CALL_FLAGS_NONE, -1, nullptr, nullptr);
       if (stop_ret)
         g_variant_unref(stop_ret);
       verification_started = false;
     }
 
     if (device_claimed && device) {
-      GVariant* release_ret =
-          g_dbus_proxy_call_sync(device, "Release", nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr,
-                                 nullptr);
+      GVariant* release_ret = g_dbus_proxy_call_sync(device, "Release", nullptr,
+                                                     G_DBUS_CALL_FLAGS_NONE, -1, nullptr, nullptr);
       if (release_ret)
         g_variant_unref(release_ret);
       device_claimed = false;

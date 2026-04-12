@@ -5,11 +5,10 @@
 #include "utils.h"
 
 FaceDetection::FaceDetection(const std::string &ckpt, int imgsz,
-                             const std::vector<std::string> &classes, const bool &cuda,
-                             const float conf, const float iou) {
+                             const std::vector<std::string> &classes, const float conf,
+                             const float iou) {
   this->ckpt = ckpt;
   this->imgsz = imgsz;
-  this->cuda = cuda;
   this->conf = conf;
   this->iou = iou;
   this->classes = classes;

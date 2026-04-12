@@ -12,11 +12,9 @@ int argmax(const float* data, int size) {
   return max_index;
 }
 
-FaceAntiSpoofing::FaceAntiSpoofing(const std::string& ckpt, int imgsz, const bool& cuda,
-                                   const float threshold) {
+FaceAntiSpoofing::FaceAntiSpoofing(const std::string& ckpt, int imgsz, const float threshold) {
   this->ckpt = ckpt;
   this->imgsz = imgsz;
-  this->cuda = cuda;
   this->threshold = threshold;
   this->load_model(ckpt);
 }

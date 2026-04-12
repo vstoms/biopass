@@ -169,7 +169,7 @@ AuthResult FaceAuth::authenticate(const std::string& username, const AuthConfig&
     return AuthResult::Unavailable;
   }
 
-  std::vector<std::string> enrolledFaces = biopass::list_user_faces(username);
+  std::vector<std::string> enrolledFaces = biopass::list_faces(username);
   if (enrolledFaces.empty()) {
     spdlog::error("FaceAuth: No face enrolled for user {}, skipping", username);
     return AuthResult::Unavailable;

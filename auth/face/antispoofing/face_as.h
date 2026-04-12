@@ -18,8 +18,7 @@ struct SpoofResult {
 
 class FaceAntiSpoofing {
  public:
-  FaceAntiSpoofing(const std::string& ckpt, int imgsz = 128, const bool& cuda = false,
-                   const float threshold = 0.8);
+  FaceAntiSpoofing(const std::string& ckpt, int imgsz = 128, const float threshold = 0.8);
 
   void load_model(const std::string& ckpt);
   SpoofResult inference(const ImageRGB& image);
@@ -27,7 +26,6 @@ class FaceAntiSpoofing {
 
  private:
   std::string ckpt;
-  bool cuda;
   float threshold;
   int imgsz;
 

@@ -2,11 +2,9 @@
 
 #include <cmath>
 
-FaceRecognition::FaceRecognition(const std::string& ckpt, int imgsz, const bool& cuda,
-                                 const float threshold) {
+FaceRecognition::FaceRecognition(const std::string& ckpt, int imgsz, const float threshold) {
   this->ckpt = ckpt;
   this->imgsz = imgsz;
-  this->cuda = cuda;
   this->threshold = threshold;
   this->load_model(ckpt);
 }

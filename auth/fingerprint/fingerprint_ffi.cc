@@ -41,13 +41,11 @@ char** fingerprint_list_enrolled_fingers(void* auth, const char* username, int* 
   // Allocate array of string pointers (including null terminator)
   char** result = new char*[fingers.size() + 1];
 
-  // Copy each string
   for (size_t i = 0; i < fingers.size(); ++i) {
     result[i] = new char[fingers[i].length() + 1];
     std::strcpy(result[i], fingers[i].c_str());
   }
 
-  // Null terminate
   result[fingers.size()] = nullptr;
 
   *count = fingers.size();
@@ -58,12 +56,9 @@ void fingerprint_free_string_array(char** array, int count) {
   if (!array)
     return;
 
-  // Free each string
   for (int i = 0; i < count; ++i) {
     delete[] array[i];
   }
-
-  // Free array itself
   delete[] array;
 }
 
