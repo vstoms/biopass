@@ -17,6 +17,12 @@ export interface MethodsConfig {
   voice: VoiceMethodConfig;
 }
 
+export interface VideoDeviceInfo {
+  path: string;
+  name: string;
+  display_name: string;
+}
+
 export interface FaceMethodConfig {
   enable: boolean;
   retries: number;

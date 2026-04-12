@@ -42,12 +42,6 @@ void fingerprint_auth_free(void* auth);
 bool fingerprint_is_available(void* auth);
 
 /**
- * Authenticate user with fingerprint
- * Returns FingerprintAuthResult
- */
-int fingerprint_authenticate(void* auth, const char* username, FingerprintAuthConfig config);
-
-/**
  * List enrolled fingers for a user
  * Returns NULL-terminated array of strings
  * Caller must free with fingerprint_free_string_array

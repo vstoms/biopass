@@ -215,17 +215,10 @@ pub fn save_config(app: AppHandle, config: BiopassConfig) -> Result<(), String> 
     let yaml_content =
         serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {}", e))?;
 
-    // Create directory if needed
     if !config_dir.exists() {
         fs::create_dir_all(&config_dir)
             .map_err(|e| format!("Failed to create config directory: {}", e))?;
     }
 
-    // Write config file
     fs::write(&config_path, yaml_content).map_err(|e| format!("Failed to write config file: {}", e))
-}
-
-#[tauri::command]
-pub fn get_config_path_str(app: AppHandle) -> Result<String, String> {
-    Ok(get_config_path(&app)?.to_string_lossy().to_string())
 }

@@ -6,13 +6,13 @@ use crate::config::{load_config, BiopassConfig};
 use crate::paths::get_faces_dir;
 
 #[tauri::command]
-pub fn save_face_image(app: AppHandle, image_data: String) -> Result<String, String> {
+pub fn capture_face(app: AppHandle, data: String) -> Result<String, String> {
     let faces_dir = get_faces_dir(&app)?;
     let app_config: BiopassConfig = load_config(app.clone())?;
 
     // Decode base64 image data
     let image_bytes = general_purpose::STANDARD
-        .decode(&image_data)
+        .decode(&data)
         .map_err(|e| format!("Failed to decode image: {}", e))?;
 
     // Generate filename with timestamp
@@ -77,7 +77,7 @@ pub fn save_face_image(app: AppHandle, image_data: String) -> Result<String, Str
 }
 
 #[tauri::command]
-pub fn list_face_images(app: AppHandle) -> Result<Vec<String>, String> {
+pub fn list_faces(app: AppHandle) -> Result<Vec<String>, String> {
     let faces_dir = get_faces_dir(&app)?;
 
     if !faces_dir.exists() {
@@ -102,6 +102,6 @@ pub fn list_face_images(app: AppHandle) -> Result<Vec<String>, String> {
 }
 
 #[tauri::command]
-pub fn delete_face_image(path: String) -> Result<(), String> {
+pub fn delete_face(path: String) -> Result<(), String> {
     fs::remove_file(&path).map_err(|e| format!("Failed to delete file: {}", e))
 }

@@ -9,6 +9,7 @@
 #include <fstream>
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <sstream>
 #include <thread>
 
@@ -48,6 +49,15 @@ void configure_capture_logging_once() {
   static std::once_flag once;
   std::call_once(once, []() { Cap_installCustomLogFunction(capture_log_callback); });
 }
+
+std::optional<CapDeviceID> resolve_camera_device_index(CapContext ctx) {
+  const uint32_t count = Cap_getDeviceCount(ctx);
+  if (count == 0) {
+    return std::nullopt;
+  }
+
+  return static_cast<CapDeviceID>(0);
+}
 }  // namespace
 
 std::string get_timestamp_string() {
@@ -78,7 +88,13 @@ bool FaceAuth::is_available() const {
     return false;
   }
 
-  CapStream stream = Cap_openStream(ctx, 0, 0);
+  const auto device_index = resolve_camera_device_index(ctx);
+  if (!device_index.has_value()) {
+    Cap_releaseContext(ctx);
+    return false;
+  }
+
+  CapStream stream = Cap_openStream(ctx, *device_index, 0);
   bool available = stream >= 0 && Cap_isOpenStream(ctx, stream);
   if (available)
     Cap_closeStream(ctx, stream);
@@ -98,9 +114,19 @@ static ImageRGB capture_frame_from_camera() {
     return {};
   }
 
+  const auto device_index = resolve_camera_device_index(ctx);
+  if (!device_index.has_value()) {
+    Cap_releaseContext(ctx);
+    return {};
+  }
+
   CapFormatInfo fmt;
-  Cap_getFormatInfo(ctx, 0, 0, &fmt);
-  CapStream stream = Cap_openStream(ctx, 0, 0);
+  if (Cap_getFormatInfo(ctx, *device_index, 0, &fmt) != CAPRESULT_OK) {
+    Cap_releaseContext(ctx);
+    return {};
+  }
+
+  CapStream stream = Cap_openStream(ctx, *device_index, 0);
   if (stream < 0 || !Cap_isOpenStream(ctx, stream)) {
     Cap_releaseContext(ctx);
     return {};

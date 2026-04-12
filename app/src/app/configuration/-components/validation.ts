@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
+import { cmd } from "@/commands";
 import type { BiopassConfig } from "@/types/config";
 
 export async function validateConfig(config: BiopassConfig): Promise<boolean> {
@@ -33,7 +33,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
     // Validate face samples
     try {
-      const samples = await invoke<string[]>("list_face_images");
+      const samples = await cmd.face.listImages();
       if (samples.length === 0) {
         toast.error(
           "At least one face sample must be captured before enabling Face method",
@@ -56,7 +56,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
     // Validate voice samples
     try {
-      const samples = await invoke<string[]>("list_voice_recordings");
+      const samples = await cmd.voice.listRecordings();
       if (samples.length === 0) {
         toast.error(
           "At least one voice recording must be captured before enabling Voice method",
@@ -88,7 +88,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
   for (const path of modelsToCheck) {
     try {
-      const exists = await invoke<boolean>("check_file_exists", { path });
+      const exists = await cmd.file.exists(path);
       if (!exists) {
         toast.error(
           `Model file not found: ${path.split(/[\\/]/).pop()}. Please check AI Models.`,

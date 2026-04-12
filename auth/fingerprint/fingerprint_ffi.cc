@@ -23,29 +23,6 @@ bool fingerprint_is_available(void* auth) {
   return static_cast<biopass::FingerprintAuth*>(auth)->is_available();
 }
 
-int fingerprint_authenticate(void* auth, const char* username, FingerprintAuthConfig config) {
-  if (!auth || !username)
-    return AUTH_UNAVAILABLE;
-  auto* fp_auth = static_cast<biopass::FingerprintAuth*>(auth);
-
-  biopass::AuthConfig cpp_config;
-
-  biopass::AuthResult result = fp_auth->authenticate(username, cpp_config);
-
-  switch (result) {
-    case biopass::AuthResult::Success:
-      return AUTH_SUCCESS;
-    case biopass::AuthResult::Failure:
-      return AUTH_FAILURE;
-    case biopass::AuthResult::Unavailable:
-      return AUTH_UNAVAILABLE;
-    case biopass::AuthResult::Retry:
-      return AUTH_RETRY;
-    default:
-      return AUTH_UNAVAILABLE;
-  }
-}
-
 char** fingerprint_list_enrolled_fingers(void* auth, const char* username, int* count) {
   if (!auth || !username || !count) {
     if (count)
