@@ -38,15 +38,14 @@ struct Detection {
 class FaceDetection {
  public:
   FaceDetection(const std::string& ckpt, int imgsz = 640,
-                const std::vector<std::string>& classes = {"face"}, const bool& cuda = false,
-                const float conf = 0.50, const float iou = 0.50);
+                const std::vector<std::string>& classes = {"face"}, const float conf = 0.50,
+                const float iou = 0.50);
 
-  void load_model(const std::string& ckpt);
+  void loadModel(const std::string& ckpt);
   std::vector<Detection> inference(const ImageRGB& image);
   std::vector<float> preprocess(const ImageRGB& image);
 
  private:
-  bool cuda;
   float conf;
   float iou;
   int imgsz;

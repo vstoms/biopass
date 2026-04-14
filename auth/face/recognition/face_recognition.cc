@@ -2,16 +2,14 @@
 
 #include <cmath>
 
-FaceRecognition::FaceRecognition(const std::string& ckpt, int imgsz, const bool& cuda,
-                                 const float threshold) {
+FaceRecognition::FaceRecognition(const std::string& ckpt, int imgsz, const float threshold) {
   this->ckpt = ckpt;
   this->imgsz = imgsz;
-  this->cuda = cuda;
   this->threshold = threshold;
-  this->load_model(ckpt);
+  this->loadModel(ckpt);
 }
 
-void FaceRecognition::load_model(const std::string& ckpt) {
+void FaceRecognition::loadModel(const std::string& ckpt) {
   this->ckpt = ckpt;
 
   Ort::SessionOptions opts;
@@ -40,12 +38,12 @@ void FaceRecognition::load_model(const std::string& ckpt) {
 }
 
 std::vector<float> FaceRecognition::preprocess(const ImageRGB& input_image) {
-  ImageRGB resize_img = image_resize_pad(input_image, this->imgsz, this->imgsz);
+  ImageRGB resize_img = imageResizePad(input_image, this->imgsz, this->imgsz);
 
   const float mean[3] = {0.5f, 0.5f, 0.5f};
   const float std[3] = {0.5f, 0.5f, 0.5f};
 
-  return image_to_chw_normalized(resize_img, mean, std);
+  return imageToChwNormalized(resize_img, mean, std);
 }
 
 std::vector<float> FaceRecognition::inference(const ImageRGB& image) {

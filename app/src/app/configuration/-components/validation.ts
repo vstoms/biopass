@@ -1,5 +1,5 @@
-import { invoke } from "@tauri-apps/api/core";
 import { toast } from "sonner";
+import { cmd } from "@/commands";
 import type { BiopassConfig } from "@/types/config";
 
 export async function validateConfig(config: BiopassConfig): Promise<boolean> {
@@ -24,8 +24,8 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
     }
     if (
       config.methods.face.anti_spoofing.enable &&
-      (!config.methods.face.anti_spoofing.model ||
-        !registeredModelPaths.has(config.methods.face.anti_spoofing.model))
+      (!config.methods.face.anti_spoofing.model.path ||
+        !registeredModelPaths.has(config.methods.face.anti_spoofing.model.path))
     ) {
       toast.error("Valid Anti-Spoofing model is required when enabled");
       return false;
@@ -33,7 +33,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
     // Validate face samples
     try {
-      const samples = await invoke<string[]>("list_face_images");
+      const samples = await cmd.face.listImages();
       if (samples.length === 0) {
         toast.error(
           "At least one face sample must be captured before enabling Face method",
@@ -56,7 +56,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
     // Validate voice samples
     try {
-      const samples = await invoke<string[]>("list_voice_recordings");
+      const samples = await cmd.voice.listRecordings();
       if (samples.length === 0) {
         toast.error(
           "At least one voice recording must be captured before enabling Voice method",
@@ -77,9 +77,9 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
       modelsToCheck.push(config.methods.face.recognition.model);
     if (
       config.methods.face.anti_spoofing.enable &&
-      config.methods.face.anti_spoofing.model
+      config.methods.face.anti_spoofing.model.path
     ) {
-      modelsToCheck.push(config.methods.face.anti_spoofing.model);
+      modelsToCheck.push(config.methods.face.anti_spoofing.model.path);
     }
   }
   if (config.methods.voice.enable && config.methods.voice.model) {
@@ -88,7 +88,7 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
 
   for (const path of modelsToCheck) {
     try {
-      const exists = await invoke<boolean>("check_file_exists", { path });
+      const exists = await cmd.file.exists(path);
       if (!exists) {
         toast.error(
           `Model file not found: ${path.split(/[\\/]/).pop()}. Please check AI Models.`,
@@ -96,7 +96,13 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
         return false;
       }
     } catch (err) {
-      console.error("Status check failed:", err);
+      console.error(`Failed to check model file at ${path}:`, err);
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : "Unknown error occurred while validating models",
+      );
+      return false;
     }
   }
 

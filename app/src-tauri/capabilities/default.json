@@ -18,6 +18,17 @@
           "path": "$DATA/com.ticklab.biopass/**"
         }
       ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        {
+          "path": "$HOME/.local/share/com.ticklab.biopass/**"
+        },
+        {
+          "path": "$DATA/com.ticklab.biopass/**"
+        }
+      ]
     }
   ]
 }

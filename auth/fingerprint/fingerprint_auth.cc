@@ -88,7 +88,7 @@ gboolean on_verify_timeout(gpointer user_data) {
 
 }  // namespace
 
-bool FingerprintAuth::is_available() const {
+bool FingerprintAuth::isAvailable() const {
   GError* error = nullptr;
   GDBusProxy* manager = g_dbus_proxy_new_for_bus_sync(G_BUS_TYPE_SYSTEM, G_DBUS_PROXY_FLAGS_NONE,
                                                       nullptr, FPRINT_SERVICE, FPRINT_MANAGER_PATH,
@@ -155,18 +155,16 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
     }
 
     if (verification_started && device) {
-      GVariant* stop_ret =
-          g_dbus_proxy_call_sync(device, "VerifyStop", nullptr, G_DBUS_CALL_FLAGS_NONE, -1,
-                                 nullptr, nullptr);
+      GVariant* stop_ret = g_dbus_proxy_call_sync(device, "VerifyStop", nullptr,
+                                                  G_DBUS_CALL_FLAGS_NONE, -1, nullptr, nullptr);
       if (stop_ret)
         g_variant_unref(stop_ret);
       verification_started = false;
     }
 
     if (device_claimed && device) {
-      GVariant* release_ret =
-          g_dbus_proxy_call_sync(device, "Release", nullptr, G_DBUS_CALL_FLAGS_NONE, -1, nullptr,
-                                 nullptr);
+      GVariant* release_ret = g_dbus_proxy_call_sync(device, "Release", nullptr,
+                                                     G_DBUS_CALL_FLAGS_NONE, -1, nullptr, nullptr);
       if (release_ret)
         g_variant_unref(release_ret);
       device_claimed = false;
@@ -323,7 +321,7 @@ AuthResult FingerprintAuth::authenticate(const std::string& username, const Auth
   return ctx.result;
 }
 
-std::vector<std::string> FingerprintAuth::list_enrolled_fingers(const std::string& username) {
+std::vector<std::string> FingerprintAuth::listEnrolledFingers(const std::string& username) {
   std::vector<std::string> enrolled_fingers;
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
@@ -577,7 +575,7 @@ bool FingerprintAuth::enroll(const std::string& username, const std::string& fin
   return ctx.success;
 }
 
-bool FingerprintAuth::remove_finger(const std::string& username, const std::string& finger_name) {
+bool FingerprintAuth::removeFinger(const std::string& username, const std::string& finger_name) {
   GError* error = nullptr;
   GDBusConnection* connection = g_bus_get_sync(G_BUS_TYPE_SYSTEM, nullptr, &error);
   if (!connection) {

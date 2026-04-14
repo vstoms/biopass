@@ -7,7 +7,7 @@ interface Props {
   onChange: (value: number) => void;
 }
 
-export function SliderField({ label, value, onChange }: Props) {
+export function Threshold({ label, value, onChange }: Props) {
   return (
     <div className="grid gap-2">
       <div className="flex items-center justify-between">

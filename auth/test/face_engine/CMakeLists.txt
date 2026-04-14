@@ -11,4 +11,9 @@ target_link_libraries(${FACE_TEST} PRIVATE
     biopass_det
     biopass_reg
     biopass_stb
+    CLI11::CLI11
+)
+
+target_compile_definitions(${FACE_TEST} PRIVATE
+    BIOPASS_MODEL_DIR="${CMAKE_SOURCE_DIR}/face/models"
 )

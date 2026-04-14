@@ -5,22 +5,19 @@
 #include <atomic>
 #include <iostream>
 
-#include "retry_strategy.h"
-
 namespace biopass {
 
-void AuthManager::add_method(std::unique_ptr<IAuthMethod> method) {
+void AuthManager::addMethod(std::unique_ptr<IAuthMethod> method) {
   this->methods_.push_back(std::move(method));
 }
 
-void AuthManager::set_mode(ExecutionMode mode) { this->mode_ = mode; }
+void AuthManager::setMode(ExecutionMode mode) { this->mode_ = mode; }
+void AuthManager::setConfig(const AuthConfig& config) { this->config_ = config; }
 
-void AuthManager::set_config(const AuthConfig &config) { this->config_ = config; }
-
-int AuthManager::authenticate(const std::string &username) {
+int AuthManager::authenticate(const std::string& username) {
   if (this->methods_.empty()) {
     spdlog::error("AuthManager: No authentication methods configured");
-    return PAM_AUTH_ERR;
+    return PAM_IGNORE;
   }
 
   // Set default logger level according to debug config
@@ -32,32 +29,32 @@ int AuthManager::authenticate(const std::string &username) {
 
   switch (this->mode_) {
     case ExecutionMode::Sequential:
-      return this->run_sequential(username);
+      return this->runSequential(username);
     case ExecutionMode::Parallel:
-      return this->run_parallel(username);
+      return this->runParallel(username);
     default:
       return PAM_AUTH_ERR;
   }
 }
 
-int AuthManager::run_sequential(const std::string &username) {
+int AuthManager::runSequential(const std::string& username) {
   bool any_attempted = false;
 
-  for (auto &method : this->methods_) {
-    if (!method->is_available()) {
+  for (auto& method : this->methods_) {
+    if (!method->isAvailable()) {
       spdlog::debug("AuthManager: {} is not available, skipping", method->name());
       continue;
     }
 
-    RetryStrategy retry_strategy(method->get_retries());
+    RetryStrategy rs(method->getRetries());
     int attempts = 0;
     AuthResult result;
 
     do {
       if (attempts > 0) {
         spdlog::debug("AuthManager: Retrying {} (attempt {}/{})", method->name(), attempts + 1,
-                      method->get_retries());
-        std::this_thread::sleep_for(std::chrono::milliseconds(method->get_retry_delay_ms()));
+                      method->getRetries());
+        std::this_thread::sleep_for(std::chrono::milliseconds(method->getRetryDelayMs()));
       } else {
         spdlog::debug("AuthManager: Trying {} authentication", method->name());
       }
@@ -65,14 +62,14 @@ int AuthManager::run_sequential(const std::string &username) {
       result = method->authenticate(username, this->config_);
       attempts++;
 
-    } while (retry_strategy.should_retry(result, attempts));
+    } while (rs.shouldRetry(result, attempts));
 
     switch (result) {
       case AuthResult::Success:
         spdlog::debug("AuthManager: {} authentication succeeded", method->name());
         return PAM_SUCCESS;
       case AuthResult::Unavailable:
-        spdlog::debug("AuthManager: {} became unavailable, skipping", method->name());
+        spdlog::debug("AuthManager: {} is unavailable, skipping", method->name());
         break;
       case AuthResult::Failure:
         any_attempted = true;
@@ -94,22 +91,24 @@ int AuthManager::run_sequential(const std::string &username) {
   return PAM_AUTH_ERR;
 }
 
-int AuthManager::run_parallel(const std::string &username) {
+int AuthManager::runParallel(const std::string& username) {
+  if (this->methods_.empty()) {
+    spdlog::debug("AuthManager: No methods were able to run for this user, skipping module");
+    return PAM_IGNORE;
+  }
+
   std::atomic<bool> success_found{false};
   std::vector<std::future<AuthResult>> futures;
 
-  // Launch all methods in parallel
-  for (auto &method : this->methods_) {
-    if (!method->is_available()) {
+  for (auto& method : this->methods_) {
+    if (!method->isAvailable()) {
       spdlog::debug("AuthManager: {} is not available, skipping", method->name());
       continue;
     }
 
-    // Capture by reference - methods_ lifetime is guaranteed during
-    // authenticate()
     futures.push_back(std::async(
         std::launch::async, [&method, &username, &config = this->config_, &success_found]() {
-          RetryStrategy retry_strategy(method->get_retries());
+          RetryStrategy retry_strategy(method->getRetries());
           int attempts = 0;
           AuthResult result;
 
@@ -122,14 +121,14 @@ int AuthManager::run_parallel(const std::string &username) {
             if (attempts > 0) {
               spdlog::debug("AuthManager: Retrying {} (parallel attempt {})", method->name(),
                             attempts + 1);
-              std::this_thread::sleep_for(std::chrono::milliseconds(method->get_retry_delay_ms()));
+              std::this_thread::sleep_for(std::chrono::milliseconds(method->getRetryDelayMs()));
             } else {
               spdlog::debug("AuthManager: Starting {} authentication (parallel)", method->name());
             }
 
             result = method->authenticate(username, config, &success_found);
             attempts++;
-          } while (retry_strategy.should_retry(result, attempts) && !success_found.load());
+          } while (retry_strategy.shouldRetry(result, attempts) && !success_found.load());
 
           if (result == AuthResult::Success) {
             success_found.store(true);
@@ -140,16 +139,9 @@ int AuthManager::run_parallel(const std::string &username) {
         }));
   }
 
-  // If no method was launched at all, skip this module
-  if (futures.empty()) {
-    spdlog::debug("AuthManager: No methods were able to run for this user, skipping module");
-    return PAM_IGNORE;
-  }
-
-  // Wait for all futures and check results
   bool any_success = false;
   bool any_attempted = false;
-  for (auto &future : futures) {
+  for (auto& future : futures) {
     AuthResult result = future.get();
     if (result == AuthResult::Success) {
       any_success = true;

@@ -1,11 +1,11 @@
-import { invoke } from "@tauri-apps/api/core";
 import { Circle, Mic, Square, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { cmd } from "@/commands";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-export function VoiceRecordingSection() {
+export function VoiceSetting() {
   const [recording, setRecording] = useState(false);
   const [voiceRecordings, setVoiceRecordings] = useState<string[]>([]);
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -15,7 +15,7 @@ export function VoiceRecordingSection() {
 
   const loadVoiceRecordings = useCallback(async () => {
     try {
-      const recordings = await invoke<string[]>("list_voice_recordings");
+      const recordings = await cmd.voice.listRecordings();
       setVoiceRecordings(recordings);
     } catch (err) {
       console.error("Failed to load voice recordings:", err);
@@ -163,9 +163,7 @@ export function VoiceRecordingSection() {
     reader.onloadend = async () => {
       const base64Data = (reader.result as string).split(",")[1];
       try {
-        await invoke("save_voice_recording", {
-          audioData: base64Data,
-        });
+        await cmd.voice.saveRecording(base64Data);
         toast.success("Voice recording saved as WAV!");
         await loadVoiceRecordings();
       } catch (err) {
@@ -177,7 +175,7 @@ export function VoiceRecordingSection() {
 
   async function deleteVoice(path: string) {
     try {
-      await invoke("delete_voice_recording", { path });
+      await cmd.voice.deleteRecording(path);
       toast.success("Voice recording deleted");
       await loadVoiceRecordings();
     } catch (err) {

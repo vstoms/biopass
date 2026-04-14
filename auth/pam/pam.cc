@@ -9,7 +9,7 @@
 
 // Called by PAM when a user needs to be authenticated
 PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, const char **argv) {
-  (void)flags;  // Suppress unused parameter warning
+  (void)flags;
   (void)argc;
   (void)argv;
 
@@ -33,23 +33,15 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
 
   pid_t pid = fork();
   if (pid < 0) {
-    // Fork failed
     return PAM_AUTH_ERR;
   } else if (pid == 0) {
-    // Child process: execute the helper binary
-    // The helper binary should be installed in a standard location.
-    // We pass the username as the first argument.
-
-    // We use a known absolute path to avoid PATH spoofing attacks.
-    // In a real production environment, this path should be configurable,
-    // or strictly defined at compile-time (e.g. /usr/bin/biopass-helper).
-    execl("/usr/bin/biopass-helper", "biopass-helper", pUsername, NULL);
+    // Run "biopass-helper auth --username <username>"
+    execl("/usr/bin/biopass-helper", "biopass-helper", "auth", "--username", pUsername, NULL);
 
     // If execl returns, it failed
     perror("execl failed");
     exit(1);
   } else {
-    // Parent process (PAM module inside sudo/login): wait for the child
     int status;
     waitpid(pid, &status, 0);
 
@@ -58,7 +50,7 @@ PAM_EXTERN int pam_sm_authenticate(pam_handle_t *pamh, int flags, int argc, cons
       if (exit_code == 0) {
         return PAM_SUCCESS;
       } else if (exit_code == 2) {
-        return PAM_IGNORE;  // The helper skipped authentication (e.g. no config)
+        return PAM_IGNORE;
       } else {
         return PAM_AUTH_ERR;
       }

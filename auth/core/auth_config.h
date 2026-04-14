@@ -29,23 +29,27 @@ struct RecognitionConfig {
 
 struct AntiSpoofingConfig {
   bool enable = false;
-  std::string model = "models/mobilenetv3_antispoof.onnx";
-  float threshold = 0.8f;
+  struct ModelConfig {
+    std::string path = "models/mobilenetv3_antispoof.onnx";
+    float threshold = 0.8f;
+  } model;
+  // Linux device path, e.g. "/dev/video2". Empty means disabled.
+  std::string irCamera;
 };
 
 struct FaceMethodConfig {
   bool enable = true;
   int retries = 5;
-  int retry_delay_ms = 200;
+  int retryDelayMs = 200;
   DetectionConfig detection;
   RecognitionConfig recognition;
-  AntiSpoofingConfig anti_spoofing;
+  AntiSpoofingConfig antiSpoofing;
 };
 
 struct VoiceMethodConfig {
   bool enable = false;
   int retries = 3;
-  int retry_delay_ms = 500;
+  int retryDelayMs = 500;
   std::string model = "models/voice.onnx";
   float threshold = 0.8f;
 };
@@ -77,32 +81,13 @@ struct BiopassConfig {
   AuthConfig auth = {};
   MethodsConfig methods_config = {};
 };
+std::string getConfigPath(const std::string &username);
+BiopassConfig readConfig(const std::string &username);
+bool configExists(const std::string &username);
+bool migrateConfigSchema(const std::string &username, std::string *error = nullptr);
 
-// ---------------------------------------------------------------------------
-// Config loading
-// ---------------------------------------------------------------------------
-
-BiopassConfig load_config(const std::string &username);
-std::string get_config_path(const std::string &username);
-bool config_exists(const std::string &username);
-
-// ---------------------------------------------------------------------------
-// Path helpers
-// ---------------------------------------------------------------------------
-
-// Returns the base data directory for a user.
-std::string user_data_dir(const std::string &username);
-
-// Returns the path to the faces directory for a user.
-std::string user_faces_dir(const std::string &username);
-
-// Returns all enrolled face image paths for a user (jpg/png).
-std::vector<std::string> list_user_faces(const std::string &username);
-
-// Returns the path to the debug directory for a user.
-std::string debug_path(const std::string &username);
-
-// Creates required data directories for a user.
-int setup_config(const std::string &username);
+std::vector<std::string> listFaces(const std::string &username);
+std::string getDebugPath(const std::string &username);
+int setupConfig(const std::string &username);
 
 }  // namespace biopass

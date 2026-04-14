@@ -9,9 +9,6 @@
 
 namespace biopass {
 
-/**
- * Execution mode for authentication methods.
- */
 enum class ExecutionMode {
   Sequential,  // Try methods in order, fallback on failure
   Parallel     // Run all methods concurrently, succeed on first success
@@ -31,39 +28,14 @@ class AuthManager {
   AuthManager(AuthManager &&) = default;
   AuthManager &operator=(AuthManager &&) = default;
 
-  /**
-   * Add an authentication method to the manager.
-   * Methods are tried in the order they are added (for sequential mode).
-   */
-  void add_method(std::unique_ptr<IAuthMethod> method);
-
-  /**
-   * Set the execution mode.
-   */
-  void set_mode(ExecutionMode mode);
-
-  /**
-   * Set the configuration for all methods.
-   */
-  void set_config(const AuthConfig &config);
-
-  /**
-   * Authenticate the user using the configured methods and mode.
-   * @param username The PAM username to authenticate.
-   * @return PAM_SUCCESS on success, PAM_AUTH_ERR on failure.
-   */
+  void addMethod(std::unique_ptr<IAuthMethod> method);
+  void setMode(ExecutionMode mode);
+  void setConfig(const AuthConfig &config);
   int authenticate(const std::string &username);
 
  private:
-  /**
-   * Run methods sequentially with fallback.
-   */
-  int run_sequential(const std::string &username);
-
-  /**
-   * Run methods in parallel, return on first success.
-   */
-  int run_parallel(const std::string &username);
+  int runSequential(const std::string &username);
+  int runParallel(const std::string &username);
 
   std::vector<std::unique_ptr<IAuthMethod>> methods_;
   ExecutionMode mode_ = ExecutionMode::Parallel;

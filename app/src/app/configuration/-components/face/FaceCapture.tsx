@@ -1,19 +1,46 @@
-import { convertFileSrc, invoke } from "@tauri-apps/api/core";
+import { convertFileSrc } from "@tauri-apps/api/core";
 import { Camera, Circle, Square, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { cmd } from "@/commands";
 import { Button } from "@/components/ui/button";
 
-export function FaceCaptureSection() {
+function stopMediaStream(stream: MediaStream | null) {
+  if (!stream) return;
+
+  for (const track of stream.getTracks()) {
+    track.stop();
+  }
+}
+
+async function openCamera(deviceId?: string) {
+  const video = deviceId
+    ? {
+        width: 640,
+        height: 480,
+        deviceId: { exact: deviceId },
+      }
+    : {
+        width: 640,
+        height: 480,
+      };
+
+  return navigator.mediaDevices.getUserMedia({ video });
+}
+
+export function FaceCapture() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturing, setCapturing] = useState(false);
   const [faceImages, setFaceImages] = useState<string[]>([]);
+  const [activeBrowserCameraLabel, setActiveBrowserCameraLabel] = useState<
+    string | null
+  >(null);
 
   const loadFaceImages = useCallback(async () => {
     try {
-      const images = await invoke<string[]>("list_face_images");
+      const images = await cmd.face.listImages();
       setFaceImages(images);
     } catch (err) {
       console.error("Failed to load face images:", err);
@@ -26,42 +53,49 @@ export function FaceCaptureSection() {
 
   useEffect(() => {
     return () => {
-      if (stream) {
-        for (const track of stream.getTracks()) {
-          track.stop();
-        }
-      }
+      stopMediaStream(stream);
     };
   }, [stream]);
 
   // Attach stream to video element when stream changes
   useEffect(() => {
-    if (videoRef.current && stream) {
-      videoRef.current.srcObject = stream;
-      videoRef.current.play().catch(console.error);
+    if (!videoRef.current) {
+      return;
     }
+
+    if (!stream) {
+      videoRef.current.srcObject = null;
+      return;
+    }
+
+    videoRef.current.srcObject = stream;
+    videoRef.current.play().catch(console.error);
   }, [stream]);
 
   async function startCamera() {
+    let mediaStream: MediaStream | null = null;
+
     try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480, facingMode: "user" },
-      });
+      mediaStream = await openCamera();
+
+      const activeTrackLabel = mediaStream.getVideoTracks()[0]?.label?.trim();
+
+      stopMediaStream(stream);
       setStream(mediaStream);
+      setActiveBrowserCameraLabel(activeTrackLabel || null);
       setCapturing(true);
     } catch (err) {
+      stopMediaStream(mediaStream);
+      setActiveBrowserCameraLabel(null);
       toast.error("Failed to access camera");
       console.error(err);
     }
   }
 
   function stopCamera() {
-    if (stream) {
-      for (const track of stream.getTracks()) {
-        track.stop();
-      }
-      setStream(null);
-    }
+    stopMediaStream(stream);
+    setStream(null);
+    setActiveBrowserCameraLabel(null);
     setCapturing(false);
   }
 
@@ -81,9 +115,7 @@ export function FaceCaptureSection() {
     const base64Data = dataUrl.split(",")[1];
 
     try {
-      await invoke<string>("save_face_image", {
-        imageData: base64Data,
-      });
+      await cmd.face.saveImage(base64Data);
       toast.success("Face image saved!");
       await loadFaceImages();
     } catch (err) {
@@ -93,7 +125,7 @@ export function FaceCaptureSection() {
 
   async function deleteFace(path: string) {
     try {
-      await invoke("delete_face_image", { path });
+      await cmd.face.deleteImage(path);
       toast.success("Face image deleted");
       await loadFaceImages();
     } catch (err) {
@@ -146,6 +178,14 @@ export function FaceCaptureSection() {
             </>
           )}
         </div>
+
+        {capturing && (
+          <p className="text-[10px] text-muted-foreground">
+            {activeBrowserCameraLabel
+              ? `Browser preview camera: ${activeBrowserCameraLabel}`
+              : "Browser preview camera: active, but WebKit did not expose a device label."}
+          </p>
+        )}
 
         {/* Saved Faces */}
         {faceImages.length > 0 && (

@@ -11,21 +11,9 @@ pub struct FingerprintAuthConfig {
 
 #[link(name = "biopass_fingerprint")]
 extern "C" {
-    // Initialization
     fn fingerprint_auth_new() -> *mut std::ffi::c_void;
     fn fingerprint_auth_free(auth: *mut std::ffi::c_void);
-
-    // Availability check
     fn fingerprint_is_available(auth: *mut std::ffi::c_void) -> bool;
-
-    // Authentication
-    fn fingerprint_authenticate(
-        auth: *mut std::ffi::c_void,
-        username: *const c_char,
-        config: FingerprintAuthConfig,
-    ) -> i32;
-
-    // List enrolled fingers
     fn fingerprint_list_enrolled_fingers(
         auth: *mut std::ffi::c_void,
         username: *const c_char,
@@ -34,7 +22,6 @@ extern "C" {
 
     fn fingerprint_free_string_array(array: *mut *mut c_char, count: i32);
 
-    // Enroll
     fn fingerprint_enroll(
         auth: *mut std::ffi::c_void,
         username: *const c_char,
@@ -49,34 +36,11 @@ extern "C" {
         user_data: *mut std::ffi::c_void,
     ) -> bool;
 
-    // Remove finger
     fn fingerprint_remove_finger(
         auth: *mut std::ffi::c_void,
         username: *const c_char,
         finger_name: *const c_char,
     ) -> bool;
-}
-
-/// Authentication result enum
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AuthResult {
-    Success,
-    Failure,
-    Unavailable,
-    Retry,
-    Unknown,
-}
-
-impl From<i32> for AuthResult {
-    fn from(value: i32) -> Self {
-        match value {
-            0 => AuthResult::Success,
-            1 => AuthResult::Failure,
-            2 => AuthResult::Unavailable,
-            3 => AuthResult::Retry,
-            _ => AuthResult::Unknown,
-        }
-    }
 }
 
 /// Safe Rust wrapper for fingerprint authentication
@@ -85,29 +49,15 @@ pub struct FingerprintAuth {
 }
 
 impl FingerprintAuth {
-    /// Create a new fingerprint authentication instance
     pub fn new() -> Self {
         let inner = unsafe { fingerprint_auth_new() };
         FingerprintAuth { inner }
     }
 
-    /// Check if fingerprint hardware is available
     pub fn is_available(&self) -> bool {
         unsafe { fingerprint_is_available(self.inner) }
     }
 
-    /// Authenticate a user with fingerprint
-    pub fn authenticate(&self, username: &str, retries: i32) -> Result<AuthResult, String> {
-        let username_c = CString::new(username).map_err(|_| "Invalid username".to_string())?;
-
-        let config = FingerprintAuthConfig { retries };
-
-        let result = unsafe { fingerprint_authenticate(self.inner, username_c.as_ptr(), config) };
-
-        Ok(AuthResult::from(result))
-    }
-
-    /// List all enrolled fingerprints for a user
     pub fn list_enrolled_fingers(&self, username: &str) -> Result<Vec<String>, String> {
         let username_c = CString::new(username).map_err(|_| "Invalid username".to_string())?;
 
@@ -137,7 +87,6 @@ impl FingerprintAuth {
         Ok(result)
     }
 
-    /// Enroll a new fingerprint for a user
     pub fn enroll(
         &self,
         username: &str,
@@ -186,7 +135,6 @@ impl FingerprintAuth {
         Ok(success)
     }
 
-    /// Remove an enrolled fingerprint
     pub fn remove_finger(&self, username: &str, finger_name: &str) -> Result<bool, String> {
         let username_c = CString::new(username).map_err(|_| "Invalid username".to_string())?;
         let finger_name_c =

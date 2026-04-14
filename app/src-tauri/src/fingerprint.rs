@@ -1,5 +1,5 @@
 use crate::config::{load_config, save_config, FingerConfig};
-use crate::fingerprint_ffi::{AuthResult, FingerprintAuth};
+use crate::fingerprint_ffi::FingerprintAuth;
 use serde::Serialize;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tauri::AppHandle;
@@ -38,18 +38,6 @@ pub fn list_fingerprint_devices() -> Result<Vec<FingerprintDevice>, String> {
 pub fn list_enrolled_fingerprints(username: String) -> Result<Vec<String>, String> {
     let auth = FingerprintAuth::new();
     auth.list_enrolled_fingers(&username)
-}
-
-/// Authenticate user with fingerprint
-#[tauri::command]
-pub fn authenticate_fingerprint(username: String, retries: Option<i32>) -> Result<bool, String> {
-    let auth = FingerprintAuth::new();
-    let retries = retries.unwrap_or(3);
-
-    match auth.authenticate(&username, retries)? {
-        AuthResult::Success => Ok(true),
-        _ => Ok(false),
-    }
 }
 
 /// Enroll a new fingerprint

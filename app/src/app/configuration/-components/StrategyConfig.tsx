@@ -26,17 +26,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import type { StrategyConfig } from "@/types/config";
-
-interface Props {
-  strategy: StrategyConfig;
-  onChange: (strategy: StrategyConfig) => void;
-}
+import { useConfigurationStore } from "../-stores/configuration-store";
 
 const PAM_MANUAL_SETUP_GUIDE_URL =
   "https://github.com/TickLabVN/biopass/blob/main/docs/PAM.md";
 
-export function StrategySection({ strategy, onChange }: Props) {
+export function StrategyConfig() {
+  const strategy = useConfigurationStore((state) => state.config?.strategy);
+  const setStrategy = useConfigurationStore((state) => state.setStrategy);
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -44,14 +41,17 @@ export function StrategySection({ strategy, onChange }: Props) {
     }),
   );
 
+  if (!strategy) return null;
+  const strategyConfig = strategy;
+
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
-      const oldIndex = strategy.order.indexOf(active.id as string);
-      const newIndex = strategy.order.indexOf(over.id as string);
-      const newOrder = arrayMove(strategy.order, oldIndex, newIndex);
-      onChange({ ...strategy, order: newOrder });
+      const oldIndex = strategyConfig.order.indexOf(active.id as string);
+      const newIndex = strategyConfig.order.indexOf(over.id as string);
+      const newOrder = arrayMove(strategyConfig.order, oldIndex, newIndex);
+      setStrategy({ ...strategyConfig, order: newOrder });
     }
   }
 
@@ -98,9 +98,9 @@ export function StrategySection({ strategy, onChange }: Props) {
           </div>
           <Switch
             id="debug-enabled"
-            checked={strategy.debug}
+            checked={strategyConfig.debug}
             onCheckedChange={(checked) =>
-              onChange({ ...strategy, debug: checked })
+              setStrategy({ ...strategyConfig, debug: checked })
             }
           />
         </div>
@@ -111,10 +111,10 @@ export function StrategySection({ strategy, onChange }: Props) {
             Execution Mode
           </Label>
           <Select
-            value={strategy.execution_mode}
+            value={strategyConfig.execution_mode}
             onValueChange={(value) =>
-              onChange({
-                ...strategy,
+              setStrategy({
+                ...strategyConfig,
                 execution_mode: value as "sequential" | "parallel",
               })
             }
@@ -132,14 +132,14 @@ export function StrategySection({ strategy, onChange }: Props) {
             </SelectContent>
           </Select>
           <p className="text-xs text-muted-foreground">
-            {strategy.execution_mode === "sequential"
+            {strategyConfig.execution_mode === "sequential"
               ? "Methods are tried in order until one succeeds"
               : "All methods run simultaneously, first success wins"}
           </p>
         </div>
 
         {/* Method Order - Only show in sequential mode */}
-        {strategy.execution_mode === "sequential" && (
+        {strategyConfig.execution_mode === "sequential" && (
           <div className="grid gap-2.5">
             <Label className="text-sm font-medium text-muted-foreground">
               Method Priority Order
@@ -153,11 +153,11 @@ export function StrategySection({ strategy, onChange }: Props) {
               onDragEnd={handleDragEnd}
             >
               <SortableContext
-                items={strategy.order}
+                items={strategyConfig.order}
                 strategy={verticalListSortingStrategy}
               >
                 <div className="flex flex-col gap-2">
-                  {strategy.order.map((method, index) => (
+                  {strategyConfig.order.map((method, index) => (
                     <SortableMethodItem
                       key={method}
                       id={method}

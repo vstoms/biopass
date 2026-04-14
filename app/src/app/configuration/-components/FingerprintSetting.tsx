@@ -1,8 +1,8 @@
-import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { cmd } from "@/commands";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -12,51 +12,63 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import type { FingerprintMethodConfig } from "@/types/config";
+import { useConfigurationStore } from "../-stores/configuration-store";
 
-interface Props {
-  config: FingerprintMethodConfig;
-  onUpdate: (config: FingerprintMethodConfig) => void;
-}
-
-export function FingerprintSection({ config, onUpdate }: Props) {
+export function FingerprintSetting() {
+  const config = useConfigurationStore(
+    (state) => state.config?.methods.fingerprint,
+  );
+  const setFingerprintConfig = useConfigurationStore(
+    (state) => state.setFingerprintConfig,
+  );
   const [selectedFinger, setSelectedFinger] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
   const [username, setUsername] = useState<string>("");
 
   useEffect(() => {
+    let canceled = false;
+
     const fetchUsername = async () => {
       try {
-        const user = await invoke<string>("get_current_username");
+        const user = await cmd.system.getCurrentUsername();
+        if (canceled) return;
+
         setUsername(user);
 
         // Sync enrolled fingers from backend
-        const enrolledFingers = await invoke<string[]>(
-          "list_enrolled_fingerprints",
-          { username: user },
-        );
+        const enrolledFingers = await cmd.fingerprint.listEnrolled(user);
+        if (canceled) return;
+
+        const currentConfig =
+          useConfigurationStore.getState().config?.methods.fingerprint;
+        if (!currentConfig) return;
 
         // Update local config if there's a mismatch (best effort)
-        const currentFingerNames = config.fingers.map((f) => f.name);
+        const currentFingerNames = currentConfig.fingers.map((f) => f.name);
         const needsSync =
           enrolledFingers.some((f) => !currentFingerNames.includes(f)) ||
           currentFingerNames.some((f) => !enrolledFingers.includes(f));
 
         if (needsSync) {
           const syncedFingers = enrolledFingers.map((name) => {
-            const existing = config.fingers.find((f) => f.name === name);
+            const existing = currentConfig.fingers.find((f) => f.name === name);
             return (
               existing || { name, created_at: Math.floor(Date.now() / 1000) }
             );
           });
-          onUpdate({ ...config, fingers: syncedFingers });
+          setFingerprintConfig({ ...currentConfig, fingers: syncedFingers });
         }
       } catch (err) {
         console.error("Failed to sync fingerprints:", err);
       }
     };
+
     fetchUsername();
-  }, [config, onUpdate]);
+
+    return () => {
+      canceled = true;
+    };
+  }, [setFingerprintConfig]);
 
   const fingerOptions = [
     "left-thumb",
@@ -72,6 +84,10 @@ export function FingerprintSection({ config, onUpdate }: Props) {
   ];
 
   const handleAdd = async () => {
+    const currentConfig =
+      useConfigurationStore.getState().config?.methods.fingerprint;
+    if (!currentConfig) return;
+
     setIsAdding(true);
     const toastId = toast.loading(
       `Enrolling ${selectedFinger.replace(/-/g, " ")}... Please touch the sensor.`,
@@ -92,10 +108,7 @@ export function FingerprintSection({ config, onUpdate }: Props) {
     );
 
     try {
-      await invoke("enroll_fingerprint", {
-        username: username,
-        fingerName: selectedFinger,
-      });
+      await cmd.fingerprint.enroll(username, selectedFinger);
 
       const formattedName = selectedFinger.replace(/-/g, " ");
       const capitalizedName =
@@ -105,10 +118,10 @@ export function FingerprintSection({ config, onUpdate }: Props) {
       });
 
       // The backend saves to config, but we update UI immediately
-      onUpdate({
-        ...config,
+      setFingerprintConfig({
+        ...currentConfig,
         fingers: [
-          ...config.fingers,
+          ...currentConfig.fingers,
           { name: selectedFinger, created_at: Math.floor(Date.now() / 1000) },
         ],
       });
@@ -122,24 +135,27 @@ export function FingerprintSection({ config, onUpdate }: Props) {
   };
 
   const handleDelete = async (fingerName: string) => {
+    const currentConfig =
+      useConfigurationStore.getState().config?.methods.fingerprint;
+    if (!currentConfig) return;
+
     try {
-      await invoke("remove_fingerprint", {
-        username: username,
-        fingerName: fingerName,
-      });
+      await cmd.fingerprint.remove(username, fingerName);
       const formattedName = fingerName.replace(/-/g, " ");
       const capitalizedName =
         formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
       toast.success(`${capitalizedName} deleted`);
 
-      onUpdate({
-        ...config,
-        fingers: config.fingers.filter((f) => f.name !== fingerName),
+      setFingerprintConfig({
+        ...currentConfig,
+        fingers: currentConfig.fingers.filter((f) => f.name !== fingerName),
       });
     } catch (err) {
       toast.error(`Delete failed: ${err}`);
     }
   };
+
+  if (!config) return null;
 
   return (
     <div className="grid gap-4">

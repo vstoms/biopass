@@ -12,6 +12,24 @@ target_include_directories(biopass_stb PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
+# Shared face utilities (camera capture, debug image I/O).
+add_library(biopass_face_common STATIC
+    common/camera_capture.cc
+    common/debug_image_io.cc
+)
+set_target_properties(biopass_face_common PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_include_directories(biopass_face_common PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/common
+    ${CMAKE_SOURCE_DIR}/core
+)
+target_link_libraries(biopass_face_common
+    biopass_stb
+    biopass_core
+    openpnp-capture
+    spdlog::spdlog_header_only
+)
+
 # Face auth wrapper library
 add_library(biopass_face STATIC
     face_auth.cc
@@ -26,6 +44,7 @@ target_include_directories(biopass_face PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/detection
     ${CMAKE_CURRENT_SOURCE_DIR}/recognition
     ${CMAKE_CURRENT_SOURCE_DIR}/antispoofing
+    ${CMAKE_CURRENT_SOURCE_DIR}/common
 )
 
 target_link_libraries(biopass_face
@@ -33,7 +52,7 @@ target_link_libraries(biopass_face
     biopass_det
     biopass_reg
     biopass_as
+    biopass_face_common
     biopass_stb
-    openpnp-capture
     ${ONNXRUNTIME_LIB}
 )

@@ -1,30 +1,20 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 pub mod config;
 pub mod face;
-pub mod file_utils;
+pub mod fingerprint;
+pub mod fingerprint_ffi;
 pub mod paths;
 pub mod system;
 pub mod voice;
 
-use config::{get_config_path_str, load_config, save_config};
-use face::{delete_face_image, list_face_images, save_face_image};
-use file_utils::{check_file_exists, delete_file};
+use config::{load_config, save_config};
+use face::{capture_face, delete_face, list_faces};
+use fingerprint::{
+    add_fingerprint, delete_fingerprint, enroll_fingerprint, fingerprint_is_available,
+    list_enrolled_fingerprints, list_fingerprint_devices, remove_fingerprint,
+};
 use system::{get_current_username, list_video_devices};
 use voice::{delete_voice_recording, list_voice_recordings, save_voice_recording};
-
-pub mod fingerprint;
-pub mod fingerprint_ffi;
-
-use fingerprint::{
-    add_fingerprint, authenticate_fingerprint, delete_fingerprint, enroll_fingerprint,
-    fingerprint_is_available, list_enrolled_fingerprints, list_fingerprint_devices,
-    remove_fingerprint,
-};
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 use tauri::Manager;
 
@@ -52,27 +42,22 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            greet,
             load_config,
             save_config,
-            get_config_path_str,
             get_current_username,
-            save_face_image,
+            capture_face,
             save_voice_recording,
-            list_face_images,
+            list_faces,
             list_voice_recordings,
             list_video_devices,
-            delete_face_image,
+            delete_face,
             delete_voice_recording,
-            check_file_exists,
-            delete_file,
             add_fingerprint,
             delete_fingerprint,
             enroll_fingerprint,
             remove_fingerprint,
             fingerprint_is_available,
             list_enrolled_fingerprints,
-            authenticate_fingerprint,
             list_fingerprint_devices
         ])
         .run(tauri::generate_context!())

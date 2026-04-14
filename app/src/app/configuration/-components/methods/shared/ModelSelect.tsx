@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/core";
 import { useEffect, useState } from "react";
-import { ModelStatus } from "@/components/models/ModelStatus";
+import { ModelStatus } from "@/app/-components/ModelStatus";
+import { cmd } from "@/commands";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -20,13 +20,7 @@ interface Props {
   onChange: (value: string) => void;
 }
 
-export function ModelSelectField({
-  label,
-  value,
-  models,
-  error,
-  onChange,
-}: Props) {
+export function ModelSelect({ label, value, models, error, onChange }: Props) {
   const selectedModel = models.find((m) => m.path === value);
   const [statusMap, setStatusMap] = useState<Record<string, boolean>>({});
 
@@ -36,9 +30,7 @@ export function ModelSelectField({
       await Promise.all(
         models.map(async (m) => {
           try {
-            newStatusMap[m.path] = await invoke<boolean>("check_file_exists", {
-              path: m.path,
-            });
+            newStatusMap[m.path] = await cmd.file.exists(m.path);
           } catch {
             newStatusMap[m.path] = false;
           }
