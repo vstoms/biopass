@@ -29,8 +29,12 @@ struct RecognitionConfig {
 
 struct AntiSpoofingConfig {
   bool enable = false;
-  std::string model = "models/mobilenetv3_antispoof.onnx";
-  float threshold = 0.8f;
+  struct ModelConfig {
+    std::string path = "models/mobilenetv3_antispoof.onnx";
+    float threshold = 0.8f;
+  } model;
+  // Linux device path, e.g. "/dev/video2". Empty means disabled.
+  std::string ir_camera;
 };
 
 struct FaceMethodConfig {
@@ -77,8 +81,10 @@ struct BiopassConfig {
   AuthConfig auth = {};
   MethodsConfig methods_config = {};
 };
+std::string get_config_path(const std::string &username);
 BiopassConfig load_config(const std::string &username);
 bool config_exists(const std::string &username);
+bool migrate_config_schema(const std::string &username, std::string *error = nullptr);
 
 std::vector<std::string> list_faces(const std::string &username);
 std::string debug_path(const std::string &username);

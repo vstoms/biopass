@@ -9,7 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import type { VideoDeviceInfo } from "@/types/config";
 import { useConfigurationStore } from "../../-stores/configuration-store";
 import { ModelSelect } from "../methods/shared/ModelSelect";
@@ -36,11 +35,31 @@ export function FaceSetting() {
 
   const selectedIrCamera = useMemo(() => {
     if (!config) return null;
-    const irCameraPath = `/dev/video${config.ir_camera.device_id}`;
+    const irCameraPath = config.anti_spoofing.ir_camera;
+    if (!irCameraPath) return null;
     return videoDevices.find((device) => device.path === irCameraPath) ?? null;
   }, [config, videoDevices]);
+  const antiSpoofModels = useMemo(
+    () => models.filter((m) => m.type === "anti-spoofing"),
+    [models],
+  );
 
   if (!config) return null;
+
+  const disabledOption = "__disabled__";
+  const unavailableAiModelOption = "__unavailable_ai_model__";
+  const unavailableIrDeviceOption = "__unavailable_ir_device__";
+  const selectedAiModelExists = antiSpoofModels.some(
+    (model) => model.path === config.anti_spoofing.model.path,
+  );
+  const irCameraValue = config.anti_spoofing.ir_camera
+    ? (selectedIrCamera?.path ?? unavailableIrDeviceOption)
+    : disabledOption;
+  const aiModelValue = config.anti_spoofing.enable
+    ? selectedAiModelExists
+      ? config.anti_spoofing.model.path
+      : unavailableAiModelOption
+    : disabledOption;
 
   return (
     <div className="grid gap-4">
@@ -156,95 +175,123 @@ export function FaceSetting() {
       </div>
 
       <div className="p-4 rounded-lg bg-muted/50 border border-border/50 space-y-3">
-        <div className="flex items-center justify-between">
-          <h4 className="font-medium text-sm">Anti-Spoofing</h4>
-          <Switch
-            checked={config.anti_spoofing.enable}
-            onCheckedChange={(enable) =>
+        <h4 className="font-medium text-sm">Anti-Spoofing</h4>
+        <div className="grid gap-2">
+          <Label
+            htmlFor="anti-spoofing-method"
+            className="text-xs text-muted-foreground"
+          >
+            AI Model
+          </Label>
+          <Select
+            value={aiModelValue}
+            onValueChange={(value) => {
+              if (value === disabledOption) {
+                setFaceConfig({
+                  ...config,
+                  anti_spoofing: { ...config.anti_spoofing, enable: false },
+                });
+                return;
+              }
+
               setFaceConfig({
                 ...config,
-                anti_spoofing: { ...config.anti_spoofing, enable },
-              })
-            }
-            className="cursor-pointer"
-          />
+                anti_spoofing: {
+                  ...config.anti_spoofing,
+                  enable: true,
+                  model: { ...config.anti_spoofing.model, path: value },
+                },
+              });
+            }}
+          >
+            <SelectTrigger id="anti-spoofing-method" className="h-10 w-full">
+              <SelectValue placeholder="Select AI anti-spoofing method" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={disabledOption}>Disable</SelectItem>
+              {aiModelValue === unavailableAiModelOption && (
+                <SelectItem value={unavailableAiModelOption} disabled>
+                  Selected anti-spoofing model unavailable
+                </SelectItem>
+              )}
+              {antiSpoofModels.length > 0 ? (
+                antiSpoofModels.map((model) => (
+                  <SelectItem key={model.path} value={model.path}>
+                    {model.path.split("/").pop()}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_ai_models__" disabled>
+                  No anti-spoofing models available
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
-        {config.anti_spoofing.enable && (
-          <div className="space-y-4">
-            <div className="flex gap-6 items-end">
-              <div className="flex-1 min-w-0">
-                <ModelSelect
-                  label="Model"
-                  value={config.anti_spoofing.model}
-                  models={models.filter((m) => m.type === "anti-spoofing")}
-                  error={config.anti_spoofing.enable}
-                  onChange={(model) =>
-                    setFaceConfig({
-                      ...config,
-                      anti_spoofing: { ...config.anti_spoofing, model },
-                    })
-                  }
-                />
-              </div>
-              <div className="w-48 shrink-0">
-                <Threshold
-                  label="Threshold"
-                  value={config.anti_spoofing.threshold}
-                  onChange={(threshold) =>
-                    setFaceConfig({
-                      ...config,
-                      anti_spoofing: { ...config.anti_spoofing, threshold },
-                    })
-                  }
-                />
-              </div>
-            </div>
 
-            <div className="grid gap-2">
-              <h5 className="font-medium text-sm">IR Camera</h5>
-              <Label
-                htmlFor="ir-device"
-                className="text-xs text-muted-foreground"
-              >
-                Select Device
-              </Label>
-              <Select
-                value={
-                  config.ir_camera.enable ? (selectedIrCamera?.path ?? "") : ""
-                }
-                onValueChange={(value) =>
-                  setFaceConfig({
-                    ...config,
-                    ir_camera: {
-                      ...config.ir_camera,
-                      enable: true,
-                      device_id:
-                        Number.parseInt(value.replace("/dev/video", ""), 10) ||
-                        0,
-                    },
-                  })
-                }
-              >
-                <SelectTrigger id="ir-device" className="h-10 w-full">
-                  <SelectValue placeholder="Select IR Camera Device" />
-                </SelectTrigger>
-                <SelectContent>
-                  {videoDevices.length > 0 ? (
-                    videoDevices.map((device) => (
-                      <SelectItem key={device.path} value={device.path}>
-                        {device.display_name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      No video devices found
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+        {config.anti_spoofing.enable && (
+          <div className="w-48">
+            <Threshold
+              label="Threshold"
+              value={config.anti_spoofing.model.threshold}
+              onChange={(threshold) =>
+                setFaceConfig({
+                  ...config,
+                  anti_spoofing: {
+                    ...config.anti_spoofing,
+                    model: { ...config.anti_spoofing.model, threshold },
+                  },
+                })
+              }
+            />
           </div>
         )}
+
+        <div className="grid gap-2">
+          <Label htmlFor="ir-device" className="text-xs text-muted-foreground">
+            IR Camera
+          </Label>
+          <Select
+            value={irCameraValue}
+            onValueChange={(value) => {
+              if (value === disabledOption) {
+                setFaceConfig({
+                  ...config,
+                  anti_spoofing: { ...config.anti_spoofing, ir_camera: null },
+                });
+                return;
+              }
+
+              setFaceConfig({
+                ...config,
+                anti_spoofing: { ...config.anti_spoofing, ir_camera: value },
+              });
+            }}
+          >
+            <SelectTrigger id="ir-device" className="h-10 w-full">
+              <SelectValue placeholder="Select IR Camera Device" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={disabledOption}>Disable</SelectItem>
+              {irCameraValue === unavailableIrDeviceOption && (
+                <SelectItem value={unavailableIrDeviceOption} disabled>
+                  Selected IR camera unavailable
+                </SelectItem>
+              )}
+              {videoDevices.length > 0 ? (
+                videoDevices.map((device) => (
+                  <SelectItem key={device.path} value={device.path}>
+                    {device.display_name}
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="__no_ir_devices__" disabled>
+                  No video devices found
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
     </div>
   );

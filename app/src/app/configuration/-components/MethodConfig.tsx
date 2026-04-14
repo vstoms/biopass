@@ -36,9 +36,9 @@ export function MethodConfig() {
 
   return (
     <div className="rounded-xl border border-border/50 bg-card/50 backdrop-blur-sm p-6 shadow-lg">
-      <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-        <span className="w-8 h-8 rounded-lg bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center">
-          <ShieldCheck className="w-4 h-4 text-white" />
+      <h2 className="text-2xl sm:text-3xl font-bold tracking-tight mb-6 flex items-center gap-3">
+        <span className="w-10 h-10 rounded-xl bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-sm">
+          <ShieldCheck className="w-5 h-5 text-white" />
         </span>
         Authentication Methods
       </h2>

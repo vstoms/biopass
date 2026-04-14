@@ -113,9 +113,9 @@ function ModelsRouteComponent() {
       }
       if (
         config.methods.face.anti_spoofing.enable &&
-        config.methods.face.anti_spoofing.model
+        config.methods.face.anti_spoofing.model.path
       ) {
-        inUsePaths.add(config.methods.face.anti_spoofing.model);
+        inUsePaths.add(config.methods.face.anti_spoofing.model.path);
       }
       if (config.methods.voice.model) {
         inUsePaths.add(config.methods.voice.model);

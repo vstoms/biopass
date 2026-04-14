@@ -1,4 +1,5 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+use serde_yaml::Value as YamlValue;
 use std::fs;
 use std::path::PathBuf;
 use tauri::AppHandle;
@@ -28,23 +29,80 @@ pub struct MethodsConfig {
     pub voice: VoiceMethodConfig,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 pub struct FaceMethodConfig {
+    pub enable: bool,
+    pub retries: u32,
+    pub retry_delay: u32,
+    pub detection: DetectionConfig,
+    pub recognition: RecognitionConfig,
+    pub anti_spoofing: AntiSpoofingConfig,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct LegacyIRCameraConfig {
+    #[serde(default)]
+    pub enable: bool,
+    #[serde(default)]
+    pub device_id: i32,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct AntiSpoofingConfigRaw {
+    #[serde(default)]
+    pub enable: bool,
+    #[serde(default)]
+    pub model: Option<YamlValue>,
+    #[serde(default)]
+    pub threshold: Option<f32>,
+    #[serde(default)]
+    pub ir_camera: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct FaceMethodConfigRaw {
+    #[serde(default)]
     pub enable: bool,
     #[serde(default = "default_face_retries")]
     pub retries: u32,
     #[serde(default = "default_face_delay")]
     pub retry_delay: u32,
+    #[serde(default)]
     pub detection: DetectionConfig,
+    #[serde(default)]
     pub recognition: RecognitionConfig,
-    pub anti_spoofing: AntiSpoofingConfig,
-    pub ir_camera: IRCameraConfig,
+    #[serde(default)]
+    pub anti_spoofing: AntiSpoofingConfigRaw,
+    #[serde(default)]
+    pub ir_camera: Option<LegacyIRCameraConfig>,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct IRCameraConfig {
-    pub enable: bool,
-    pub device_id: i32,
+impl<'de> Deserialize<'de> for FaceMethodConfig {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let raw = FaceMethodConfigRaw::deserialize(deserializer)?;
+
+        let mut anti_spoofing = AntiSpoofingConfig::from_raw(raw.anti_spoofing);
+        if anti_spoofing.ir_camera.is_none() {
+            if let Some(legacy_ir_camera) = raw.ir_camera {
+                if legacy_ir_camera.enable {
+                    anti_spoofing.ir_camera =
+                        Some(format!("/dev/video{}", legacy_ir_camera.device_id));
+                }
+            }
+        }
+
+        Ok(Self {
+            enable: raw.enable,
+            retries: raw.retries,
+            retry_delay: raw.retry_delay,
+            detection: raw.detection,
+            recognition: raw.recognition,
+            anti_spoofing,
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -53,17 +111,93 @@ pub struct DetectionConfig {
     pub threshold: f32,
 }
 
+impl Default for DetectionConfig {
+    fn default() -> Self {
+        Self {
+            model: "models/yolov8n-face.onnx".to_string(),
+            threshold: 0.8,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct RecognitionConfig {
     pub model: String,
     pub threshold: f32,
 }
 
+impl Default for RecognitionConfig {
+    fn default() -> Self {
+        Self {
+            model: "models/edgeface_s_gamma_05.onnx".to_string(),
+            threshold: 0.8,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct AntiSpoofingModelConfig {
+    pub path: String,
+    pub threshold: f32,
+}
+
+impl Default for AntiSpoofingModelConfig {
+    fn default() -> Self {
+        Self {
+            path: "models/mobilenetv3_antispoof.onnx".to_string(),
+            threshold: 0.8,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
 pub struct AntiSpoofingConfig {
     pub enable: bool,
-    pub model: String,
-    pub threshold: f32,
+    pub model: AntiSpoofingModelConfig,
+    pub ir_camera: Option<String>,
+}
+
+impl AntiSpoofingConfig {
+    fn from_raw(raw: AntiSpoofingConfigRaw) -> Self {
+        let mut model = AntiSpoofingModelConfig::default();
+
+        if let Some(model_value) = raw.model {
+            match model_value {
+                YamlValue::Mapping(map) => {
+                    if let Some(path_value) = map.get(&YamlValue::String("path".to_string())) {
+                        if let Some(path) = path_value.as_str() {
+                            model.path = path.to_string();
+                        }
+                    }
+                    if let Some(threshold_value) =
+                        map.get(&YamlValue::String("threshold".to_string()))
+                    {
+                        if let Some(threshold) = threshold_value.as_f64() {
+                            model.threshold = threshold as f32;
+                        }
+                    }
+                }
+                YamlValue::String(path) => {
+                    // Backward compatibility with old schema:
+                    // anti_spoofing.model: "<path>"
+                    model.path = path;
+                }
+                _ => {}
+            }
+        }
+
+        // Backward compatibility with old schema:
+        // anti_spoofing.threshold: <float>
+        if let Some(threshold) = raw.threshold {
+            model.threshold = threshold;
+        }
+
+        Self {
+            enable: raw.enable,
+            model,
+            ir_camera: raw.ir_camera,
+        }
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -153,12 +287,11 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
                 },
                 anti_spoofing: AntiSpoofingConfig {
                     enable: true,
-                    model: model_path("mobilenetv3_antispoof.onnx"),
-                    threshold: 0.8,
-                },
-                ir_camera: IRCameraConfig {
-                    enable: false,
-                    device_id: 0,
+                    model: AntiSpoofingModelConfig {
+                        path: model_path("mobilenetv3_antispoof.onnx"),
+                        threshold: 0.8,
+                    },
+                    ir_camera: None,
                 },
             },
             fingerprint: FingerprintMethodConfig {

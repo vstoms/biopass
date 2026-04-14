@@ -1,9 +1,10 @@
 {
-    "cmake.sourceDirectory": "auth",
+    "cmake.sourceDirectory": "/home/npvinh/works/ticklab/biopass/auth",
     "rust-analyzer.linkedProjects": [
         "app/src-tauri/Cargo.toml"
     ],
     "biome.lsp.bin": "app/node_modules/@biomejs/biome/bin/biome",
+    "biome.configurationPath": "app/biome.json",
     "[typescript]": {
         "editor.defaultFormatter": "biomejs.biome"
     },

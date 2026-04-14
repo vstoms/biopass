@@ -37,12 +37,11 @@ export interface FaceMethodConfig {
   };
   anti_spoofing: {
     enable: boolean;
-    model: string;
-    threshold: number;
-  };
-  ir_camera: {
-    enable: boolean;
-    device_id: number;
+    model: {
+      path: string;
+      threshold: number;
+    };
+    ir_camera: string | null;
   };
 }
 

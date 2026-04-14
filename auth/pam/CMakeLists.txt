@@ -26,7 +26,6 @@ target_include_directories(biopass-helper PRIVATE
 
 target_link_libraries(biopass-helper
     ${ONNXRUNTIME_LIB}
-    openpnp-capture
     biopass_core
     biopass_face
     biopass_voice

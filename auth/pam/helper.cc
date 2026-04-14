@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pwd.h>
 
 #include <CLI/CLI.hpp>
 #include <memory>
@@ -99,6 +100,22 @@ int handle_authenticate(const std::string& username) {
   }
 }
 
+int handle_migrate_config(const std::string& username) {
+  if (getpwnam(username.c_str()) == nullptr) {
+    spdlog::error("User '{}' not found", username);
+    return 1;
+  }
+
+  std::string error;
+  if (!biopass::migrate_config_schema(username, &error)) {
+    spdlog::error("Failed to migrate config schema: {}", error);
+    return 1;
+  }
+
+  spdlog::info("Biopass: Config migration completed for user '{}'", username);
+  return 0;
+}
+
 int main(int argc, char** argv) {
   CLI::App app{"Biopass Helper Tool"};
   app.require_subcommand(1, 1);
@@ -112,6 +129,12 @@ int main(int argc, char** argv) {
   std::string username;
   auto auth_cmd = app.add_subcommand("auth", "Authenticate a user with Biopass");
   auth_cmd->add_option("--username,-u", username, "Username for authentication")->required();
+
+  std::string migrate_username;
+  auto migrate_cmd =
+      app.add_subcommand("migrate", "Migration tool for applying schema changes (run once after updates)");
+  migrate_cmd->add_option("--username,-u", migrate_username, "Username to migrate")->required();
+  migrate_cmd->group("");
 
   try {
     app.parse(argc, argv);
@@ -129,6 +152,14 @@ int main(int argc, char** argv) {
       return 2;  // PAM_IGNORE logic / error
     }
     return handle_authenticate(username);
+  }
+
+  if (app.got_subcommand(migrate_cmd)) {
+    if (migrate_username.empty()) {
+      spdlog::info("{}", app.help());
+      return 1;
+    }
+    return handle_migrate_config(migrate_username);
   }
 
   spdlog::error("No valid subcommand provided");

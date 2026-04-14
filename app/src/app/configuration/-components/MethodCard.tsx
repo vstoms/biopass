@@ -35,12 +35,12 @@ export function MethodCard({
       )}
     >
       <div className="p-4 flex items-center justify-between gap-4">
-        <button
+        <div
           className="flex items-center gap-4 flex-1 cursor-pointer group/header"
           onClick={onExpand}
           onKeyDown={(e) => e.key === "Enter" && onExpand()}
+          role="button"
           tabIndex={0}
-          type="button"
         >
           <div
             className={cn(
@@ -66,7 +66,7 @@ export function MethodCard({
               </Badge>
             )}
           </div>
-        </button>
+        </div>
 
         <div
           className="flex items-center gap-4"
