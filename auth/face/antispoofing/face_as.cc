@@ -71,5 +71,5 @@ SpoofResult FaceAntiSpoofing::inference(const ImageRGB& image) {
 
   int spoof_cls = argmax(logits, 2);
   float score = logits[spoof_cls];
-  return SpoofResult(score, spoof_cls == 1 && score >= this->threshold);
+  return SpoofResult(score, spoof_cls == 0 && score >= this->threshold);
 }
