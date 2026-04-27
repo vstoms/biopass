@@ -53,8 +53,7 @@ Biopass was developed by [@phucvinh57](https://github.com/phucvinh57) and [@thai
         - [x] With AI model
         - [x] With IR camera
     - [x] Fingerprint
-    - [ ] Voice: recognition + anti-spoofing (we are discussing about it in https://github.com/TickLabVN/biopass/discussions/62)
-- [ ] Local AI model management: User can download, update, and delete AI models for face and voice authentication methods.
+- [ ] Local AI model management: User can download, update, and delete AI models for supported authentication methods.
 
 Feel free to request new features or report bugs by opening an issue. For contributing, please read [CONTRIBUTING.md](docs/contributing.md).
 

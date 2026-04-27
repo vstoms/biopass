@@ -29,7 +29,7 @@ set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "" FORCE)
 FetchContent_Declare(
     openpnp-capture
     GIT_REPOSITORY https://github.com/openpnp/openpnp-capture.git
-    GIT_TAG        v0.0.30
+    GIT_TAG        32a9bdd3e8e3a31b12cb6573e7c6076208421651
 )
 FetchContent_MakeAvailable(openpnp-capture)
 unset(CMAKE_POLICY_VERSION_MINIMUM CACHE)
@@ -51,7 +51,7 @@ set(YAML_CPP_INSTALL OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(
     yaml-cpp
     GIT_REPOSITORY https://github.com/jbeder/yaml-cpp.git
-    GIT_TAG        0.8.0
+    GIT_TAG        yaml-cpp-0.9.0
 )
 FetchContent_MakeAvailable(yaml-cpp)
 

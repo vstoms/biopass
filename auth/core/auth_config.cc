@@ -149,21 +149,6 @@ BiopassConfig readConfig(const std::string& username) {
                                  !config.methods_config.face.antiSpoofing.irCamera.empty();
       }
 
-      // Voice
-      if (m["voice"]) {
-        const auto& v = m["voice"];
-        if (v["enable"])
-          config.methods_config.voice.enable = v["enable"].as<bool>();
-        if (v["retries"])
-          config.methods_config.voice.retries = v["retries"].as<int>();
-        if (v["retry_delay"])
-          config.methods_config.voice.retryDelayMs = v["retry_delay"].as<int>();
-        if (v["model"])
-          config.methods_config.voice.model = v["model"].as<std::string>();
-        if (v["threshold"])
-          config.methods_config.voice.threshold = v["threshold"].as<float>();
-      }
-
       // Fingerprint
       if (m["fingerprint"]) {
         const auto& fp = m["fingerprint"];
@@ -181,8 +166,6 @@ BiopassConfig readConfig(const std::string& username) {
       std::vector<std::string> enabled;
       for (const auto& name : config.methods) {
         if (name == "face" && config.methods_config.face.enable)
-          enabled.push_back(name);
-        else if (name == "voice" && config.methods_config.voice.enable)
           enabled.push_back(name);
         else if (name == "fingerprint" && config.methods_config.fingerprint.enable)
           enabled.push_back(name);

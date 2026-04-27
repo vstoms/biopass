@@ -27,7 +27,6 @@ set(FaceAntiSpoof_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/face/antispoofing)
 # Application Directories
 add_subdirectory(core)
 add_subdirectory(face)
-add_subdirectory(voice)
 add_subdirectory(fingerprint)
 add_subdirectory(pam)
 

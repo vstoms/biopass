@@ -14,7 +14,6 @@ export interface StrategyConfig {
 export interface MethodsConfig {
   face: FaceMethodConfig;
   fingerprint: FingerprintMethodConfig;
-  voice: VoiceMethodConfig;
 }
 
 export interface VideoDeviceInfo {
@@ -57,15 +56,7 @@ export interface FingerConfig {
   created_at: number;
 }
 
-export interface VoiceMethodConfig {
-  enable: boolean;
-  retries: number;
-  retry_delay: number;
-  model: string;
-  threshold: number;
-}
-
 export interface ModelConfig {
   path: string;
-  type: "detection" | "recognition" | "anti-spoofing" | "voice";
+  type: "detection" | "recognition" | "anti-spoofing";
 }
