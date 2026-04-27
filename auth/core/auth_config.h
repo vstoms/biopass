@@ -46,14 +46,6 @@ struct FaceMethodConfig {
   AntiSpoofingConfig antiSpoofing;
 };
 
-struct VoiceMethodConfig {
-  bool enable = false;
-  int retries = 3;
-  int retryDelayMs = 500;
-  std::string model = "models/voice.onnx";
-  float threshold = 0.8f;
-};
-
 struct FingerprintMethodConfig {
   bool enable = false;
   int retries = 3;
@@ -62,7 +54,6 @@ struct FingerprintMethodConfig {
 
 struct MethodsConfig {
   FaceMethodConfig face;
-  VoiceMethodConfig voice;
   FingerprintMethodConfig fingerprint;
 };
 

@@ -15,8 +15,6 @@
                 "${workspaceFolder}/auth/fingerprint",
                 "${workspaceFolder}/auth/face/antispoofing",
                 "${workspaceFolder}/auth/face/recognition",
-                "/usr/include/glib-2.0",
-                "/usr/lib/x86_64-linux-gnu/glib-2.0/include",
                 "${workspaceFolder}/auth/build/_deps/stb-src",
                 "${workspaceFolder}/auth/voice",
                 "${workspaceFolder}/auth/build/_deps/yaml-cpp-src/include",

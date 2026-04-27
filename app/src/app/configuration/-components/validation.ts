@@ -45,29 +45,6 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
     }
   }
 
-  if (config.methods.voice.enable) {
-    if (
-      !config.methods.voice.model ||
-      !registeredModelPaths.has(config.methods.voice.model)
-    ) {
-      toast.error("Valid Voice Recognition model is required");
-      return false;
-    }
-
-    // Validate voice samples
-    try {
-      const samples = await cmd.voice.listRecordings();
-      if (samples.length === 0) {
-        toast.error(
-          "At least one voice recording must be captured before enabling Voice method",
-        );
-        return false;
-      }
-    } catch (err) {
-      console.error("Failed to check voice samples:", err);
-    }
-  }
-
   // Check for missing model files
   const modelsToCheck: string[] = [];
   if (config.methods.face.enable) {
@@ -82,10 +59,6 @@ export async function validateConfig(config: BiopassConfig): Promise<boolean> {
       modelsToCheck.push(config.methods.face.anti_spoofing.model.path);
     }
   }
-  if (config.methods.voice.enable && config.methods.voice.model) {
-    modelsToCheck.push(config.methods.voice.model);
-  }
-
   for (const path of modelsToCheck) {
     try {
       const exists = await cmd.file.exists(path);

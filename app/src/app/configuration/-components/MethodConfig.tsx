@@ -1,4 +1,4 @@
-import { Fingerprint, Mic, ScanFace, ShieldCheck } from "lucide-react";
+import { Fingerprint, ScanFace, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,13 +25,11 @@ export function MethodConfig() {
   const methodIcons: Record<string, React.ReactNode> = {
     face: <ScanFace className="w-5 h-5 text-white" />,
     fingerprint: <Fingerprint className="w-5 h-5 text-white" />,
-    voice: <Mic className="w-5 h-5 text-white" />,
   };
 
   const methodColors: Record<string, string> = {
     face: "from-violet-500 to-purple-500",
     fingerprint: "from-emerald-500 to-teal-500",
-    voice: "from-orange-500 to-amber-500",
   };
 
   return (
@@ -128,35 +126,6 @@ export function MethodConfig() {
             <div className="overflow-hidden">
               <FingerprintSetting />
             </div>
-          </div>
-        </MethodCard>
-
-        {/* Voice Authentication — Coming Soon */}
-        <MethodCard
-          title="Voice Recognition"
-          icon={methodIcons.voice}
-          color={methodColors.voice}
-          enabled={false}
-          onToggle={() => {}}
-          expanded={expandedMethod === "voice"}
-          onExpand={() =>
-            setExpandedMethod(expandedMethod === "voice" ? null : "voice")
-          }
-        >
-          <div className="flex flex-col items-center justify-center gap-3 py-8 text-center">
-            <div className="w-14 h-14 rounded-full bg-orange-500/10 flex items-center justify-center">
-              <Mic className="w-7 h-7 text-orange-500" />
-            </div>
-            <div>
-              <p className="font-semibold text-base">Coming Soon</p>
-              <p className="text-sm text-muted-foreground mt-1 max-w-md">
-                Voice recognition is currently under development and will be
-                available in a future update.
-              </p>
-            </div>
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-orange-500/10 text-orange-500 border border-orange-500/20">
-              🚧 In Development
-            </span>
           </div>
         </MethodCard>
       </div>

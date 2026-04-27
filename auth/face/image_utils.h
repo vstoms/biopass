@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <limits>
 #include <string>
 #include <vector>
 
@@ -21,9 +22,26 @@ struct ImageRGB {
   int height = 0;
   std::vector<uint8_t> data;  // size = width * height * 3
 
+  static size_t byteSize(int w, int h) {
+    if (w <= 0 || h <= 0) return 0;
+    const size_t ws = static_cast<size_t>(w);
+    const size_t hs = static_cast<size_t>(h);
+    if (ws > std::numeric_limits<size_t>::max() / hs / 3) return 0;
+    return ws * hs * 3;
+  }
+
   ImageRGB() = default;
-  ImageRGB(int w, int h) : width(w), height(h), data(w * h * 3, 0) {}
-  ImageRGB(int w, int h, const uint8_t *src) : width(w), height(h), data(src, src + w * h * 3) {}
+  ImageRGB(int w, int h) : width(std::max(0, w)), height(std::max(0, h)), data(byteSize(width, height), 0) {}
+  ImageRGB(int w, int h, const uint8_t *src) : width(std::max(0, w)), height(std::max(0, h)) {
+    const size_t bytes = byteSize(width, height);
+    if (bytes == 0 || !src) {
+      width = 0;
+      height = 0;
+      return;
+    }
+    data.resize(bytes);
+    std::memcpy(data.data(), src, bytes);
+  }
 
   bool empty() const { return data.empty(); }
   uint8_t *ptr() { return data.data(); }

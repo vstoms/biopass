@@ -3,7 +3,6 @@ import { face } from "./face";
 import { file } from "./file";
 import { fingerprint } from "./fingerprint";
 import { system } from "./system";
-import { voice } from "./voice";
 
 export const cmd = {
   config,
@@ -11,5 +10,4 @@ export const cmd = {
   file,
   fingerprint,
   system,
-  voice,
 };

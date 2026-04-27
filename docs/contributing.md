@@ -126,7 +126,6 @@ biopass/
 │   ├── core/             # Shared classes (logging, config parsing)
 │   ├── face/             # Implementation of the face auth module (Yolo, EdgeFace, MobileNetV3)
 │   ├── fingerprint/      # Implementation of the fingerprint auth module
-│   ├── voice/            # Implementation of the voice auth module 
 │   ├── pam/              # PAM module integration logic (`libbiopass_pam.so` and `biopass-helper`)
 │   └── CMakeLists.txt    # Build orchestration for the auth module
 │

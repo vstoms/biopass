@@ -22,7 +22,3 @@ pub fn get_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
 pub fn get_faces_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(get_data_dir(app)?.join("faces"))
 }
-
-pub fn get_voices_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    Ok(get_data_dir(app)?.join("voices"))
-}

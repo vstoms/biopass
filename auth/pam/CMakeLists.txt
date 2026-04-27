@@ -20,7 +20,6 @@ target_include_directories(biopass-helper PRIVATE
     ${FaceRecognition_INCLUDE_DIRS}
     ${CMAKE_SOURCE_DIR}/core
     ${CMAKE_SOURCE_DIR}/face
-    ${CMAKE_SOURCE_DIR}/voice
     ${CMAKE_SOURCE_DIR}/fingerprint
 )
 
@@ -28,7 +27,6 @@ target_link_libraries(biopass-helper
     ${ONNXRUNTIME_LIB}
     biopass_core
     biopass_face
-    biopass_voice
     biopass_fingerprint
     spdlog::spdlog_header_only
 )

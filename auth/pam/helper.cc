@@ -12,7 +12,6 @@
 #include "face_auth.h"
 #include "fingerprint_auth.h"
 #include "image_utils.h"
-#include "voice_auth.h"
 
 #include "detection/face_detection.h"
 
@@ -74,9 +73,6 @@ int authenticate(const std::string& username) {
   for (const auto& method_name : config.methods) {
     if (method_name == "face") {
       manager.addMethod(std::make_unique<biopass::FaceAuth>(config.methods_config.face));
-      numOfMethods++;
-    } else if (method_name == "voice") {
-      manager.addMethod(std::make_unique<biopass::VoiceAuth>(config.methods_config.voice));
       numOfMethods++;
     } else if (method_name == "fingerprint") {
       manager.addMethod(

@@ -117,10 +117,6 @@ function ModelsRouteComponent() {
       ) {
         inUsePaths.add(config.methods.face.anti_spoofing.model.path);
       }
-      if (config.methods.voice.model) {
-        inUsePaths.add(config.methods.voice.model);
-      }
-
       const checks = modelList.map(async (model) => {
         try {
           const exists = await cmd.file.exists(model.path);

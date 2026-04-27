@@ -5,7 +5,6 @@ pub mod fingerprint;
 pub mod fingerprint_ffi;
 pub mod paths;
 pub mod system;
-pub mod voice;
 
 use config::{load_config, save_config};
 use face::{capture_face, delete_face, list_faces};
@@ -14,7 +13,6 @@ use fingerprint::{
     list_enrolled_fingerprints, list_fingerprint_devices, remove_fingerprint,
 };
 use system::{get_current_username, list_video_devices};
-use voice::{delete_voice_recording, list_voice_recordings, save_voice_recording};
 
 use tauri::Manager;
 
@@ -46,12 +44,9 @@ pub fn run() {
             save_config,
             get_current_username,
             capture_face,
-            save_voice_recording,
             list_faces,
-            list_voice_recordings,
             list_video_devices,
             delete_face,
-            delete_voice_recording,
             add_fingerprint,
             delete_fingerprint,
             enroll_fingerprint,

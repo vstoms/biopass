@@ -26,7 +26,6 @@ pub struct StrategyConfig {
 pub struct MethodsConfig {
     pub face: FaceMethodConfig,
     pub fingerprint: FingerprintMethodConfig,
-    pub voice: VoiceMethodConfig,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -219,17 +218,6 @@ pub struct FingerConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct VoiceMethodConfig {
-    pub enable: bool,
-    #[serde(default = "default_voice_retries")]
-    pub retries: u32,
-    #[serde(default = "default_voice_delay")]
-    pub retry_delay: u32,
-    pub model: String,
-    pub threshold: f32,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ModelConfig {
     pub path: String,
     #[serde(rename = "type")]
@@ -248,11 +236,32 @@ fn default_fingerprint_retries() -> u32 {
 fn default_fingerprint_timeout() -> u32 {
     5000
 }
-fn default_voice_retries() -> u32 {
-    3
+
+const SUPPORTED_METHODS: [&str; 2] = ["face", "fingerprint"];
+
+fn normalize_method_order(order: Vec<String>) -> Vec<String> {
+    let mut normalized: Vec<String> = order
+        .into_iter()
+        .filter(|method| SUPPORTED_METHODS.contains(&method.as_str()))
+        .fold(Vec::new(), |mut acc, method| {
+            if !acc.contains(&method) {
+                acc.push(method);
+            }
+            acc
+        });
+
+    for method in SUPPORTED_METHODS {
+        if !normalized.iter().any(|current| current == method) {
+            normalized.push(method.to_string());
+        }
+    }
+
+    normalized
 }
-fn default_voice_delay() -> u32 {
-    500
+
+fn normalize_config(config: &mut BiopassConfig) {
+    config.strategy.order = normalize_method_order(std::mem::take(&mut config.strategy.order));
+    config.models.retain(|model| model.model_type != "voice");
 }
 
 fn get_default_config(app: &AppHandle) -> BiopassConfig {
@@ -266,11 +275,7 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
         strategy: StrategyConfig {
             debug: false,
             execution_mode: "parallel".to_string(),
-            order: vec![
-                "face".to_string(),
-                "fingerprint".to_string(),
-                "voice".to_string(),
-            ],
+            order: vec!["face".to_string(), "fingerprint".to_string()],
         },
         methods: MethodsConfig {
             face: FaceMethodConfig {
@@ -300,13 +305,6 @@ fn get_default_config(app: &AppHandle) -> BiopassConfig {
                 timeout: 5000,
                 fingers: vec![],
             },
-            voice: VoiceMethodConfig {
-                enable: false,
-                retries: 3,
-                retry_delay: 500,
-                model: "".to_string(),
-                threshold: 0.8,
-            },
         },
         models: vec![
             ModelConfig {
@@ -331,19 +329,25 @@ pub fn load_config(app: AppHandle) -> Result<BiopassConfig, String> {
     let config_path = get_config_path(&app)?;
 
     if !config_path.exists() {
-        return Ok(get_default_config(&app));
+        let mut default_config = get_default_config(&app);
+        normalize_config(&mut default_config);
+        return Ok(default_config);
     }
 
     let content = fs::read_to_string(&config_path)
         .map_err(|e| format!("Failed to read config file: {}", e))?;
 
-    serde_yaml::from_str(&content).map_err(|e| format!("Failed to parse config file: {}", e))
+    let mut parsed: BiopassConfig = serde_yaml::from_str(&content)
+        .map_err(|e| format!("Failed to parse config file: {}", e))?;
+    normalize_config(&mut parsed);
+    Ok(parsed)
 }
 
 #[tauri::command]
-pub fn save_config(app: AppHandle, config: BiopassConfig) -> Result<(), String> {
+pub fn save_config(app: AppHandle, mut config: BiopassConfig) -> Result<(), String> {
     let config_dir = get_config_dir(&app)?;
     let config_path = get_config_path(&app)?;
+    normalize_config(&mut config);
 
     let yaml_content =
         serde_yaml::to_string(&config).map_err(|e| format!("Failed to serialize config: {}", e))?;
